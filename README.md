@@ -30,6 +30,8 @@ if status == 'success':
 - [x] Porting to python3
 - [x] Making pyroutelib a package
 - [ ] Custom transport types
+- [ ] Handling the access key
+- [ ] Turn restrictions
 - [ ] Offline routers (load only local osm file)
 
 
