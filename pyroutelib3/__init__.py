@@ -26,6 +26,7 @@
 #  2007-11-04  OJW  Modified from pyroute.py
 #  2007-11-05  OJW  Multiple forms of transport
 #  2017-09-24  MK   Code cleanup
+#  2017-09-30  MK   LocalFile - Only router
 #----------------------------------------------------------------------------
 import os
 import re
@@ -44,21 +45,25 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.2"
+__version__ = "0.3"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
 
 class Datastore(object):
     """Parse an OSM file looking for routing information"""
-    def __init__(self, transport):
+    def __init__(self, transport, localfile=""):
         """Initialise an OSM-file parser"""
         self.routing = {}
         self.rnodes = {}
         self.transport = transport
+        self.localFile = localfile
         self.tiles = {}
         self.weights = weights.RoutingWeights()
         self.api = osmapi.OsmApi(api="api.openstreetmap.org")
+
+        if self.localFile:
+            self.loadOsm(self.localFile)
 
     def getArea(self, lat, lon):
         """Download data in the vicinity of a lat/long.
@@ -68,9 +73,9 @@ class Datastore(object):
         (x,y) = tilenames.tileXY(lat, lon, z)
 
         tileID = '%d,%d'%(x,y)
-        if(self.tiles.get(tileID,False)):
-            #print "Already got %s" % tileID
+        if self.tiles.get(tileID,False) or self.localFile:
             return
+
         self.tiles[tileID] = True
 
         filename = tiledata.GetOsmTileData(z,x,y)
@@ -277,8 +282,8 @@ class Datastore(object):
         print("Loaded %d %s routes" % (len(list(self.routing.keys())), self.transport))
 
 class Router(object):
-    def __init__(self, transport):
-        self.data = Datastore(transport)
+    def __init__(self, transport, localfile=""):
+        self.data = Datastore(transport, localfile)
 
     def distance(self,n1,n2):
         """Calculate distance between two nodes"""

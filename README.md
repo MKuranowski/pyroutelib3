@@ -26,13 +26,25 @@ if status == 'success':
 **Statuses**: success, no_route, no_such_node, gave_up
 
 
+##### Offline Routing
+
+If you want to use pyroutelib3 offline or on custom .osm file, you just need to add a second argument to Router:
+Path to the specific osm file,
+
+```python
+from pyroutelib3 import Router
+router = Router("<transport mode>", "<path-to-.osm-file>")
+# Continue on doing like in the example above
+```
+
+
 ## Todo
 - [x] Porting to python3
 - [x] Making pyroutelib a package
 - [ ] Custom transport types
 - [ ] Handling the access key
 - [ ] Turn restrictions
-- [ ] Offline routers (load only local osm file)
+- [x] Offline routers (load only local osm file)
 
 
 ## License
