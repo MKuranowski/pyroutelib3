@@ -40,7 +40,7 @@ if status == 'success':
 pyroutelib3 is distributed under GNU GPL v3.
 
 Copyright 2007, Oliver White
-Modifications: Copyright 2017, Mikołaj Kuranowski -
+Modifications: Copyright 2017, Mikolaj Kuranowski -
 Based on https://github.com/gaulinmp/pyroutelib2
 
 pyroutelib3 is free software: you can redistribute it and/or modify

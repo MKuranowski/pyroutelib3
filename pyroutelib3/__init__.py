@@ -4,7 +4,7 @@
 # node_lat, node_lon = Router().data.rnodes[node_id][0], Router().data.rnodes[node_id][1]
 #----------------------------------------------------------------------------
 # Copyright 2007, Oliver White
-# Modifications: Copyright 2017, Mikołaj Kuranowski -
+# Modifications: Copyright 2017, Mikolaj Kuranowski -
 # Based on https://github.com/gaulinmp/pyroutelib2
 #----------------------------------------------------------------------------
 # This file is part of pyroutelib3.
@@ -35,6 +35,16 @@ import osmapi
 import xml.etree.ElementTree as etree
 from datetime import datetime
 from . import (tiledata, tilenames, weights)
+
+
+__author__ = "Oliver White"
+__copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
+__credits__ = ["Oliver White", "Mikolaj Kuranowski"]
+__license__ = "GNU GPL v3"
+__version__ = "0.1"
+__maintainer__ = "Mikolaj Kuranowski"
+__email__ = "mkuranowski@gmail.com"
+
 
 class Datastore(object):
     """Parse an OSM file looking for routing information"""
