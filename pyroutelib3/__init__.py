@@ -37,11 +37,14 @@ from datetime import datetime
 from . import (tiledata, tilenames, weights)
 
 
+__title__ = "pyroutelib3"
+__description__ = "Library for simple routing on OSM data"
+__url__ = "https://github.com/MKuranowski/pyroutelib3"
 __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
-__license__ = "GNU GPL v3"
-__version__ = "0.1"
+__license__ = "GPL v3"
+__version__ = "0.2"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
