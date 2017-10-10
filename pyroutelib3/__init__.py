@@ -191,7 +191,6 @@ class Datastore(object):
         highway = self.equivalent(tags.get('highway', ''))
         railway = self.equivalent(tags.get('railway', ''))
         oneway = tags.get('oneway', '')
-        reversible = not oneway in('yes','true','1')
 
         # Calculate what vehicles can use this route
         # TODO: just use getWeight != 0
@@ -215,10 +214,10 @@ class Datastore(object):
             if last[0]:
                 if(access[self.transport]):
                     weight = self.weights.get(self.transport, railway or highway)
-                    if
-                    self.addLink(last[0], node_id, weight)
-                    self.makeNodeRouteable(last)
-                    if reversible or self.transport == 'foot':
+                    if oneway not in ("-1"):
+                        self.addLink(last[0], node_id, weight)
+                        self.makeNodeRouteable(last)
+                    if oneway not in ("yes", "true", "1") or self.transport == 'foot':
                         self.addLink(node_id, last[0], weight)
                         self.makeNodeRouteable(node)
             last = node
