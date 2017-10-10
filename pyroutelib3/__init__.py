@@ -45,7 +45,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.3"
+__version__ = "0.4"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -124,7 +124,7 @@ class Datastore(object):
 
     def parseOsmFile(self, filename):
         result = []
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             for event, elem in etree.iterparse(f): # events=['end']
                 if elem.tag == "node":
                     data = self.getElementAttributes(elem)
@@ -215,6 +215,7 @@ class Datastore(object):
             if last[0]:
                 if(access[self.transport]):
                     weight = self.weights.get(self.transport, railway or highway)
+                    if
                     self.addLink(last[0], node_id, weight)
                     self.makeNodeRouteable(last)
                     if reversible or self.transport == 'foot':
