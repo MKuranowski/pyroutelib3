@@ -18,7 +18,7 @@ end = router.data.findNode(lat, lon)
 status, route = router.doRoute(start, end) # Find the route - a list of OSM nodes
 
 if status == 'success':
-    routeLatLons = list(map(router.nodeLatLon, route)) # Get actual route coorinates
+    routeLatLons = list(map(router.nodeLatLon, route)) # Get actual route coordinates
 
 ```
 **Transport Modes**: car, cycle, foot, horse, tram, train
@@ -41,8 +41,8 @@ router = Router("<transport mode>", "<path-to-.osm-file>")
 ## Todo
 - [x] Porting to python3
 - [x] Making pyroutelib a package
-- [ ] Custom transport types
-- [ ] Handling the access key
+- [x] Custom transport types (todo documentation)
+- [x] Handling the access key
 - [ ] Turn restrictions
 - [x] Offline routers (load only local osm file)
 
