@@ -35,7 +35,7 @@ import math
 import osmapi
 import xml.etree.ElementTree as etree
 from datetime import datetime
-from . import (tiledata, tilenames, weights)
+from . import (tiledata, tilenames)
 
 
 __title__ = "pyroutelib3"
@@ -50,6 +50,37 @@ __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
 
+TYPES = {
+    "car": {
+        "weights": {"motorway": 10, "trunk": 10, "primary": 2, "secondary": 1.5, "tertiary": 1,
+            "unclassified": 1, "minor": 1, "residential": 0.7, "track": 0.5, "service": 0.5},
+        "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
+    "bus": {
+        "weights": {"motorway": 10, "trunk": 10, "primary": 2, "secondary": 1.5, "tertiary": 1,
+            "unclassified": 1, "minor": 1, "residential": 0.8, "track": 0.3, "service": 0.9},
+        "access": ["access", "vehicle", "motor_vehicle", "psv", "bus"]},
+    "cycle": {
+        "weights": {"trunk": 0.05, "primary": 0.3, "secondary": 0.9, "tertiary": 1,
+            "unclassified": 1, "minor": 1, "cycleway": 2, "residential": 2.5, "track": 1,
+            "service": 1, "bridleway": 0.8, "footway": 0.8, "steps": 0.5, "path": 1},
+        "access": ["access", "vehicle", "bicycle"]},
+    "horse": {
+        "weights": {"primary": 0.05, "secondary": 0.15, "tertiary": 0.3, "unclassified": 1,
+            "minor": 1, "residential": 1, "track": 1.5, "service": 1, "bridleway": 5, "path": 1.5},
+        "access": ["access", "horse"]},
+    "foot": {
+        "weights": {"trunk": 0.3, "primary": 0.6, "secondary": 0.95, "tertiary": 1,
+            "unclassified": 1, "minor": 1, "residential": 1, "track": 1, "service": 1,
+            "bridleway": 1, "footway": 1.2, "path": 1.2, "steps": 1.15},
+        "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
+    "tram": {
+        "weights": {"tram": 1, "light_rail": 1},
+        "access": []},
+    "train": {
+        "weights": {"rail": 1, "light_rail": 1, "subway": 1, "narrow_guage": 1},
+        "access": []}
+}
+
 class Datastore(object):
     """Parse an OSM file looking for routing information"""
     def __init__(self, transport, localfile=""):
@@ -59,8 +90,8 @@ class Datastore(object):
         self.transport = transport
         self.localFile = localfile
         self.tiles = {}
-        self.weights = weights.RoutingWeights()
         self.api = osmapi.OsmApi(api="api.openstreetmap.org")
+        self.types = TYPES
 
         if self.localFile:
             self.loadOsm(self.localFile)
@@ -92,6 +123,20 @@ class Datastore(object):
             except:
                 pass
         return result
+
+    def _allowedVehicle(self, tags):
+        "Check way against access tags"
+
+        # Default to true
+        allowed = True
+
+        # Priority is ascending in the access array
+        for key in self.types[self.transport]["access"]:
+            if key in tags:
+                if tags[key] in ("no", "private"): allowed = False
+                else: allowed =  True
+
+        return(allowed)
 
     def getElementAttributes(self, element):
         result = {}
@@ -188,32 +233,22 @@ class Datastore(object):
         return(True)
 
     def storeWay(self, wayID, tags, nodes):
-        highway = self.equivalent(tags.get('highway', ''))
-        railway = self.equivalent(tags.get('railway', ''))
+        tag = self.equivalent(tags.get('highway', '')) or self.equivalent(tags.get('railway', ''))
         oneway = tags.get('oneway', '')
 
         # Calculate what vehicles can use this route
-        # TODO: just use getWeight != 0
-        access = {}
-        access['cycle'] = highway in ('primary','secondary','tertiary','unclassified','minor','cycleway','residential', 'track','service')
-        access['car'] = highway in ('motorway','trunk','primary','secondary','tertiary','unclassified','minor','residential', 'service')
-        access['train'] = railway in ('rail','light_rail','subway')
-        access['tram'] = railway in ('tram')
-        access['foot'] = access['cycle'] or highway in('footway','steps')
-        access['horse'] = highway in ('track','unclassified','bridleway')
+        weight = self.types[self.transport]["weights"].get(tag, 0)
+
+        # Check against access tags
+        if not self._allowedVehicle(tags): weight = 0
 
         # Store routing information
-        last = [None,None,None]
-
-        if(wayID == 41 and 0):
-            print(nodes)
-            sys.exit()
+        last = [None, None, None]
 
         for node in nodes:
-            (node_id,x,y) = node
+            (node_id, x, y) = node
             if last[0]:
-                if(access[self.transport]):
-                    weight = self.weights.get(self.transport, railway or highway)
+                if weight != 0:
                     if oneway not in ("-1"):
                         self.addLink(last[0], node_id, weight)
                         self.makeNodeRouteable(last)
