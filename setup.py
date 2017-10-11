@@ -14,7 +14,7 @@ setup(
   maintainer = "Mikolaj Kuranowski",
   maintainer_email = "mkuranowski@gmail.com",
   url = "https://github.com/MKuranowski/pyroutelib3",
-  download_url = "https://github.com/MKuranowski/pyroutelib3/archive/0.3.tar.gz",
+  download_url = "https://github.com/MKuranowski/pyroutelib3/archive/0.4.tar.gz",
   keywords = "osm routing pyroutelib",
   classifiers = [],
   install_requires = ["osmapi"]
