@@ -46,7 +46,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.4"
+__version__ = "0.5"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -250,10 +250,10 @@ class Datastore(object):
             (node_id, x, y) = node
             if last[0]:
                 if weight != 0:
-                    if oneway not in ("-1"):
+                    if oneway not in ["-1"]:
                         self.addLink(last[0], node_id, weight)
                         self.makeNodeRouteable(last)
-                    if oneway not in ("yes", "true", "1") or self.transport == 'foot':
+                    if oneway not in ["yes", "true", "1"] or self.transport == 'foot':
                         self.addLink(node_id, last[0], weight)
                         self.makeNodeRouteable(node)
             last = node
@@ -263,12 +263,9 @@ class Datastore(object):
 
     def addLink(self, fr, to, weight=1):
         """Add a routeable edge to the scenario"""
-        try:
-            if to in list(self.routing[fr].keys()):
-                return
-            self.routing[fr][to] = weight
-        except KeyError:
-            self.routing[fr] = {to: weight}
+        if fr not in self.routing:
+            self.routing[fr] = {}
+        self.routing[fr][to] = weight
 
     def equivalent(self, tag):
         """Simplifies a bunch of tags to nearly-equivalent ones"""
