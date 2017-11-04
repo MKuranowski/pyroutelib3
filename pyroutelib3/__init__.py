@@ -46,7 +46,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.5"
+__version__ = "0.6"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -54,24 +54,24 @@ __email__ = "mkuranowski@gmail.com"
 TYPES = {
     "car": {
         "weights": {"motorway": 10, "trunk": 10, "primary": 2, "secondary": 1.5, "tertiary": 1,
-            "unclassified": 1, "minor": 1, "residential": 0.7, "track": 0.5, "service": 0.5},
+            "unclassified": 1, "residential": 0.7, "track": 0.5, "service": 0.5},
         "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
     "bus": {
         "weights": {"motorway": 10, "trunk": 10, "primary": 2, "secondary": 1.5, "tertiary": 1,
-            "unclassified": 1, "minor": 1, "residential": 0.8, "track": 0.3, "service": 0.9},
+            "unclassified": 1, "residential": 0.8, "track": 0.3, "service": 0.9},
         "access": ["access", "vehicle", "motor_vehicle", "psv", "bus"]},
     "cycle": {
         "weights": {"trunk": 0.05, "primary": 0.3, "secondary": 0.9, "tertiary": 1,
-            "unclassified": 1, "minor": 1, "cycleway": 2, "residential": 2.5, "track": 1,
+            "unclassified": 1, "cycleway": 2, "residential": 2.5, "track": 1,
             "service": 1, "bridleway": 0.8, "footway": 0.8, "steps": 0.5, "path": 1},
         "access": ["access", "vehicle", "bicycle"]},
     "horse": {
-        "weights": {"primary": 0.05, "secondary": 0.15, "tertiary": 0.3, "unclassified": 1,
-            "minor": 1, "residential": 1, "track": 1.5, "service": 1, "bridleway": 5, "path": 1.5},
+        "weights": {"primary": 0.05, "secondary": 0.15, "tertiary": 0.3, "unclassified": 1, \
+        "residential": 1, "track": 1.5, "service": 1, "bridleway": 5, "path": 1.5},
         "access": ["access", "horse"]},
     "foot": {
         "weights": {"trunk": 0.3, "primary": 0.6, "secondary": 0.95, "tertiary": 1,
-            "unclassified": 1, "minor": 1, "residential": 1, "track": 1, "service": 1,
+            "unclassified": 1, "residential": 1, "track": 1, "service": 1,
             "bridleway": 1, "footway": 1.2, "path": 1.2, "steps": 1.15},
         "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
     "tram": {
@@ -270,24 +270,13 @@ class Datastore(object):
     def equivalent(self, tag):
         """Simplifies a bunch of tags to nearly-equivalent ones"""
         equivalent = { \
-            "primary_link":"primary",
-            "trunk":"primary",
-            "trunk_link":"primary",
-            "secondary_link":"secondary",
-            "tertiary":"secondary",
-            "tertiary_link":"secondary",
-            "residential":"unclassified",
-            "minor":"unclassified",
-            "steps":"footway",
-            "driveway":"service",
-            "pedestrian":"footway",
-            "bridleway":"cycleway",
-            "track":"cycleway",
-            "arcade":"footway",
-            "canal":"river",
-            "riverbank":"river",
-            "lake":"river",
-            "light_rail":"railway"
+            "motorway_link": "motorway",
+            "trunk_link": "trunk",
+            "primary_link": "primary",
+            "secondary_link": "secondary",
+            "tertiary_link": "tertiary",
+            "minor": "unclassified",
+            "pedestrian": "footway"
         }
         try: return(equivalent[tag])
         except KeyError: return(tag)
