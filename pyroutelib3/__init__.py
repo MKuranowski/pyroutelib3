@@ -46,7 +46,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.6"
+__version__ = "0.7"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -88,14 +88,17 @@ class Datastore(object):
         """Initialise an OSM-file parser"""
         self.routing = {}
         self.rnodes = {}
+        self.tiles = []
         self.transport = transport
         self.localFile = localfile
-        self.tiles = {}
-        self.api = osmapi.OsmApi(api="api.openstreetmap.org")
-        self.types = TYPES
+        self.type = TYPES[transport]
 
         if self.localFile:
             self.loadOsm(self.localFile)
+            self.api = None
+
+        else:
+            self.api = osmapi.OsmApi(api="api.openstreetmap.org")
 
     def getArea(self, lat, lon):
         """Download data in the vicinity of a lat/long.
@@ -105,10 +108,10 @@ class Datastore(object):
         (x,y) = tilenames.tileXY(lat, lon, z)
 
         tileID = '%d,%d'%(x,y)
-        if self.tiles.get(tileID,False) or self.localFile:
+        if self.localFile or tileID in self.tiles:
             return
 
-        self.tiles[tileID] = True
+        self.tiles.append(tileID)
 
         filename = tiledata.GetOsmTileData(z,x,y)
         #print "Loading %d,%d at z%d from %s" % (x,y,z,filename)
@@ -132,7 +135,7 @@ class Datastore(object):
         allowed = True
 
         # Priority is ascending in the access array
-        for key in self.types[self.transport]["access"]:
+        for key in self.type["access"]:
             if key in tags:
                 if tags[key] in ("no", "private"): allowed = False
                 else: allowed =  True
@@ -234,11 +237,17 @@ class Datastore(object):
         return(True)
 
     def storeWay(self, wayID, tags, nodes):
-        tag = self.equivalent(tags.get('highway', '')) or self.equivalent(tags.get('railway', ''))
-        oneway = tags.get('oneway', '')
+        highway = self.equivalent(tags.get("highway", ""))
+        railway = self.equivalent(tags.get("railway", ""))
+        oneway = tags.get("oneway", "")
+
+        # Oneway is default on roundabouts
+        if not oneway and tags.get("junction", "") in ["roundabout", "circular"]:
+            oneway = "true"
 
         # Calculate what vehicles can use this route
-        weight = self.types[self.transport]["weights"].get(tag, 0)
+        weight = self.type["weights"].get(highway, 0) or \
+                 self.type["weights"].get(railway, 0)
 
         # Check against access tags
         if not self._allowedVehicle(tags): weight = 0
@@ -253,7 +262,7 @@ class Datastore(object):
                     if oneway not in ["-1"]:
                         self.addLink(last[0], node_id, weight)
                         self.makeNodeRouteable(last)
-                    if oneway not in ["yes", "true", "1"] or self.transport == 'foot':
+                    if oneway not in ["yes", "true", "1"] or self.transport == "foot":
                         self.addLink(node_id, last[0], weight)
                         self.makeNodeRouteable(node)
             last = node
@@ -276,7 +285,8 @@ class Datastore(object):
             "secondary_link": "secondary",
             "tertiary_link": "tertiary",
             "minor": "unclassified",
-            "pedestrian": "footway"
+            "pedestrian": "footway",
+            "platform": "footway",
         }
         try: return(equivalent[tag])
         except KeyError: return(tag)
