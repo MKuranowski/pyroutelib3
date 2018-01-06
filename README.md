@@ -41,7 +41,7 @@ router = Router("<transport mode>", "<path-to-.osm-file>")
 ## Todo
 - [x] Porting to python3
 - [x] Making pyroutelib a package
-- [x] Custom transport types (todo documentation)
+- [x] Custom transport types
 - [x] Handling the access key
 - [ ] Turn restrictions
 - [x] Offline routers (load only local osm file)
