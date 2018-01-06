@@ -46,7 +46,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.7"
+__version__ = "0.8pre2"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -317,18 +317,14 @@ class Router(object):
     def __init__(self, transport, localfile=""):
         self.data = Datastore(transport, localfile)
 
-    def distance(self,n1,n2):
-        """Calculate distance between two nodes"""
-        lat1 = self.data.rnodes[n1][0]
-        lon1 = self.data.rnodes[n1][1]
-        lat2 = self.data.rnodes[n2][0]
-        lon2 = self.data.rnodes[n2][1]
-        # TODO: projection issues
+    def distance(self, n1, n2):
+        """Calculate distance in km between two nodes using haversine forumla"""
+        lat1, lon1 = map(math.radians, self.data.rnodes[n1])
+        lat2, lon2 = map(math.radians, self.data.rnodes[n2])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        dist2 = dlat * dlat + dlon * dlon
-        dist = math.sqrt(dist2)
-        return(dist)
+        d = math.sin(dlat * 0.5) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon * 0.5) ** 2
+        return math.asin(math.sqrt(d)) * 12742
 
     def nodeLatLon(self, node):
         """Get node's lat lon"""
