@@ -28,6 +28,7 @@
 #  2017-09-24  MK   Code cleanup
 #  2017-09-30  MK   LocalFile - Only router
 #  2017-10-11  MK   Access keys
+#  2018-01-07  MK   Oneway:<Transport> tags & New distance function
 #----------------------------------------------------------------------------
 import os
 import re
@@ -46,7 +47,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.8pre3"
+__version__ = "0.8"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
