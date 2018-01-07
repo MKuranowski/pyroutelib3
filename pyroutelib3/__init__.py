@@ -46,7 +46,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.8pre2"
+__version__ = "0.8pre3"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -89,7 +89,7 @@ class Datastore(object):
         self.routing = {}
         self.rnodes = {}
         self.tiles = []
-        self.transport = transport
+        self.transport = transport if transport != "cycle" else "bicycle" # Osm uses bicycle in tags
         self.localFile = localfile
         self.type = TYPES[transport]
 
@@ -243,7 +243,10 @@ class Datastore(object):
 
         # Oneway is default on roundabouts
         if not oneway and tags.get("junction", "") in ["roundabout", "circular"]:
-            oneway = "true"
+            oneway = "yes"
+
+        if oneway in ["yes", "true", "1", "-1"] and tags.get("oneway:" + self.transport, "yes") == "no":
+            oneway = "no"
 
         # Calculate what vehicles can use this route
         weight = self.type["weights"].get(highway, 0) or \

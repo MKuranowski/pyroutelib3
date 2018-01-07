@@ -7,7 +7,7 @@ setup(
   name = "pyroutelib3",
   packages = ["pyroutelib3"],
   license = "GPL v3",
-  version = "0.8pre2",
+  version = "0.8pre3",
   description = "Library for simple routing on OSM data",
   long_description = readme,
   author = "Oliver White",
