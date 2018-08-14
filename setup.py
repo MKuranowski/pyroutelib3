@@ -10,6 +10,7 @@ setup(
   version = "0.8",
   description = "Library for simple routing on OSM data",
   long_description = readme,
+  long_description_content_type = "text/markdown"
   author = "Oliver White",
   maintainer = "Mikolaj Kuranowski",
   maintainer_email = "mkuranowski@gmail.com",
