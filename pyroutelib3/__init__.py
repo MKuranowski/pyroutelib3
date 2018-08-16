@@ -36,6 +36,7 @@ import re
 import sys
 import math
 import osmapi
+import dateutil.parser
 import xml.etree.ElementTree as etree
 from collections import OrderedDict
 from datetime import datetime
@@ -49,7 +50,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.9pre5"
+__version__ = "0.9pre6"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -106,6 +107,40 @@ class Datastore(object):
         else:
             self.api = osmapi.OsmApi(api="api.openstreetmap.org")
 
+    def _allowedVehicle(self, tags):
+        "Check way against access tags"
+
+        # Default to true
+        allowed = True
+
+        # Priority is ascending in the access array
+        for key in self.type["access"]:
+            if key in tags:
+                if tags[key] in ("no", "private"): allowed = False
+                else: allowed =  True
+
+        return(allowed)
+
+    def _attributes(self, element):
+        result = {}
+        for k, v in element.attrib.items():
+            if k == "uid": v = int(v)
+            elif k == "changeset": v = int(v)
+            elif k == "version": v = float(v)
+            elif k == "id": v = int(v)
+            elif k == "lat": v = float(v)
+            elif k == "lon": v = float(v)
+            elif k == "open": v = (v == "true")
+            elif k == "visible": v = (v == "true")
+            elif k == "ref": v = int(v)
+            elif k == "comments_count": v = int(v)
+            elif k == "timestamp": v = dateutil.parser.parse(v)
+            elif k == "created_at": v = dateutil.parser.parse(v)
+            elif k == "closed_at": v = dateutil.parser.parse(v)
+            elif k == "date": v = dateutil.parser.parse(v)
+            result[k] = v
+        return result
+
     def getArea(self, lat, lon):
         """Download data in the vicinity of a lat/long.
         Return filename to existing or newly downloaded .osm file."""
@@ -123,90 +158,41 @@ class Datastore(object):
         #print "Loading %d,%d at z%d from %s" % (x,y,z,filename)
         return(self.loadOsm(filename))
 
-    def _ParseDate(self, DateString):
-        result = DateString
-        try:
-            result = datetime.strptime(DateString, "%Y-%m-%d %H:%M:%S UTC")
-        except:
-            try:
-                result = datetime.strptime(DateString, "%Y-%m-%dT%H:%M:%SZ")
-            except:
-                pass
-        return result
-
-    def _allowedVehicle(self, tags):
-        "Check way against access tags"
-
-        # Default to true
-        allowed = True
-
-        # Priority is ascending in the access array
-        for key in self.type["access"]:
-            if key in tags:
-                if tags[key] in ("no", "private"): allowed = False
-                else: allowed =  True
-
-        return(allowed)
-
-    def getElementAttributes(self, element):
-        result = {}
-        for k, v in element.attrib.items():
-            if k == "uid": v = int(v)
-            elif k == "changeset": v = int(v)
-            elif k == "version": v = float(v)
-            elif k == "id": v = int(v)
-            elif k == "lat": v = float(v)
-            elif k == "lon": v = float(v)
-            elif k == "open": v = (v == "true")
-            elif k == "visible": v = (v == "true")
-            elif k == "ref": v = int(v)
-            elif k == "comments_count": v = int(v)
-            elif k == "timestamp": v = self._ParseDate(v)
-            elif k == "created_at": v = self._ParseDate(v)
-            elif k == "closed_at": v = self._ParseDate(v)
-            elif k == "date": v = self._ParseDate(v)
-            result[k] = v
-        return result
-
-    def getElementTags(self, element):
-        result = {}
-        for child in element:
-            if child.tag =="tag":
-                k = child.attrib["k"]
-                v = child.attrib["v"]
-                result[k] = v
-        return result
-
-    def parseOsmFile(self, filename):
+    def parseOsmFile(self, file):
         nodes, ways, relations = {}, {}, {}
-        with open(filename, "r", encoding="utf-8") as f:
-            for event, elem in etree.iterparse(f): # events=['end']
-                data = self.getElementAttributes(elem)
-                data["tag"] = self.getElementTags(elem)
+
+        # Check if a file-like object was passed
+        if hasattr(file, "read"): fp = file
+
+        # If not assume that "file" is a path to file
+        else: fp = open(os.fspath(file), "r", encoding="utf-8")
+
+        try:
+            for event, elem in etree.iterparse(fp):
+                data = self._attributes(elem)
+                data["tag"] = {i.attrib["k"]: i.attrib["v"] for i in elem.iter("tag")}
 
                 if elem.tag == "node":
                     nodes[data["id"]] = data
 
-                elif elem.tag == "way":
-                    data["nd"] = []
-                    for child in elem:
-                        if child.tag == "nd": data["nd"].append(int(child.attrib["ref"]))
+                # Store only potentially routable ways
+                elif elem.tag == "way" and (data["tag"].get("highway") or data["tag"].get("railway")):
+                    data["nd"] = [int(i.attrib["ref"]) for i in elem.iter("nd")]
                     ways[data["id"]] = data
 
-                elif elem.tag == "relation":
-                    data["member"] = []
-                    for child in elem:
-                        if child.tag == "member": data["member"].append(self.getElementAttributes(child))
+                # Store only potential turn restrictions
+                elif elem.tag == "relation" and data["tag"].get("type", "").startswith("restriction"):
+                    data["member"] = [self._attributes(i) for i in elem.iter("member")]
                     relations[data["id"]] = data
+
+        finally:
+            # Close file if a path was passed
+            if not hasattr(file, "read"): fp.close()
 
         return nodes, ways, relations
 
-    def loadOsm(self, filename):
-        if(not os.path.exists(filename)):
-            print("No such data file %s" % filename)
-            return(False)
-
-        nodes, ways, relations = self.parseOsmFile(filename)
+    def loadOsm(self, file):
+        nodes, ways, relations = self.parseOsmFile(file)
 
         for way_id, way_data in ways.items():
             way_nodes = []
@@ -245,8 +231,6 @@ class Datastore(object):
 
             except (KeyError, AssertionError, IndexError):
                 continue
-
-        return(True)
 
     def storeRestriction(self, rel_id, restriction_type, members):
         # Order members of restriction, so that members look somewhat like this: ([a, b], [b, c], [c], [c, d, e], [e, f])
@@ -291,7 +275,7 @@ class Datastore(object):
 
             self.mandatoryMoves[force_activator] = force
 
-    def storeWay(self, wayID, tags, nodes):
+    def storeWay(self, way_id, tags, nodes):
         highway = self.equivalent(tags.get("highway", ""))
         railway = self.equivalent(tags.get("railway", ""))
         oneway = tags.get("oneway", "")
@@ -308,31 +292,29 @@ class Datastore(object):
                  self.type["weights"].get(railway, 0)
 
         # Check against access tags
-        if not self._allowedVehicle(tags): weight = 0
+        if (not self._allowedVehicle(tags)) or weight <= 0:
+            return
 
         # Store routing information
-        last = [None, None, None]
+        for index in range(1, len(nodes)):
+            node1_id, node1_lat, node1_lon = nodes[index - 1]
+            node2_id, node2_lat, node2_lon = nodes[index]
 
-        for node in nodes:
-            (node_id, x, y) = node
-            if last[0]:
-                if weight != 0:
-                    if oneway not in ["-1"]:
-                        self.addLink(last[0], node_id, weight)
-                        self.makeNodeRouteable(last)
-                    if oneway not in ["yes", "true", "1"] or self.transport == "foot":
-                        self.addLink(node_id, last[0], weight)
-                        self.makeNodeRouteable(node)
-            last = node
+            # Check if nodes' positions are stored
+            if node1_id not in self.rnodes.keys(): self.rnodes[node1_id] = (node1_lat, node1_lon)
+            if node2_id not in self.rnodes.keys(): self.rnodes[node2_id] = (node2_lat, node2_lon)
 
-    def makeNodeRouteable(self, node):
-        self.rnodes[node[0]] = [node[1],node[2]]
+            # Check if nodes have dicts for storing travel costs
+            if node1_id not in self.routing.keys(): self.routing[node1_id] = {}
+            if node2_id not in self.routing.keys(): self.routing[node2_id] = {}
 
-    def addLink(self, fr, to, weight=1):
-        """Add a routeable edge to the scenario"""
-        if fr not in self.routing:
-            self.routing[fr] = {}
-        self.routing[fr][to] = weight
+            # Is way traversible forward?
+            if oneway not in ["-1", "reverse"] or self.tranport == "foot":
+                self.routing[node1_id][node2_id] = weight
+
+            # Is way traversible backword?
+            if oneway not in ["yes", "true", "1"] or self.transport == "foot":
+                self.routing[node2_id][node1_id] = weight
 
     def equivalent(self, tag):
         """Simplifies a bunch of tags to nearly-equivalent ones"""
