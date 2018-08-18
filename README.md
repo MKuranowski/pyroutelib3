@@ -12,8 +12,8 @@ OSM Data tiles is stored in `tilescache/`
 from pyroutelib3 import Router # Import the router
 router = Router("<transport mode>") # Initialise it
 
-start = router.data.findNode(lat, lon) # Find start and end nodes
-end = router.data.findNode(lat, lon)
+start = router.findNode(lat, lon) # Find start and end nodes
+end = router.findNode(lat, lon)
 
 status, route = router.doRoute(start, end) # Find the route - a list of OSM nodes
 

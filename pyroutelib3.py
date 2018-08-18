@@ -39,9 +39,9 @@ import math
 import time
 import dateutil.parser
 import xml.etree.ElementTree as etree
-from collections import OrderedDict
+from warnings import warn
 from datetime import datetime
-
+from collections import OrderedDict
 
 __title__ = "pyroutelib3"
 __description__ = "Library for simple routing on OSM data"
@@ -50,7 +50,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.9pre7"
+__version__ = "0.9pre8"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -104,7 +104,7 @@ def _tileBoundary(x, y, z):
     return left, bottom, right, top
 
 class Datastore:
-    """Parse an OSM file looking for routing information"""
+    """Object for storing routing data with basic OSM parsing functionality"""
     def __init__(self, transport, localfile=False, expire_data=30):
         """Initialise an OSM-file parser"""
         # Routing data
@@ -134,7 +134,7 @@ class Datastore:
             self.loadOsm(localfile)
 
     def _allowedVehicle(self, tags):
-        "Check way against access tags"
+        """Check way against access tags"""
 
         # Default to true
         allowed = True
@@ -218,6 +218,9 @@ class Datastore:
         self.loadOsm(filename)
 
     def parseOsmFile(self, file):
+        """Return nodes, ways and realations of given file
+           Only highway=* and railway=* ways are returned, and
+           only type=restriction (and type=restriction:<transport type>) are returned"""
         nodes, ways, relations = {}, {}, {}
 
         # Check if a file-like object was passed
@@ -251,6 +254,7 @@ class Datastore:
         return nodes, ways, relations
 
     def loadOsm(self, file):
+        """Load data from OSM file to self"""
         nodes, ways, relations = self.parseOsmFile(file)
 
         for wayId, wayData in ways.items():
@@ -409,9 +413,20 @@ class Datastore:
         print("Loaded %d nodes" % len(list(self.rnodes.keys())))
         print("Loaded %d %s routes" % (len(list(self.routing.keys())), self.transport))
 
-class Router(object):
-    def __init__(self, transport, localfile=""):
-        self.data = Datastore(transport, localfile)
+class Router(Datastore):
+    def __getattr__(self, name):
+        """BACKWARDS COMAPTIBILITY WHEN DATASTORE WAS AT Router.data"""
+        if name == ("data"):
+            warn("Router inherits from Datastore, call router.* instead of router.data.*", SyntaxWarning)
+            return self
+        return object.__getattribute__(self, name)
+
+    def __setattr__(self, name, value):
+        """BACKWARDS COMAPTIBILITY WHEN DATASTORE WAS AT Router.data"""
+        if name == ("data"):
+            warn("Router inherits from Datastore, call router.* instead of router.data.*", SyntaxWarning)
+            return self
+        return object.__setattr__(self, name, value)
 
     def doRoute(self, start, end):
         """Do the routing"""
@@ -421,11 +436,11 @@ class Router(object):
         self.nodeWasFullySerched = True
 
         # Start by queueing all outbound links from the start node
-        if start not in self.data.routing.keys():
+        if start not in self.routing.keys():
             return "no_such_node", []
 
         else:
-            for linked_node, weight in self.data.routing[start].items():
+            for linked_node, weight in self.routing[start].items():
                 self._addToQueue(start, linked_node, {"cost": 0, "nodes": str(start)}, weight)
 
         # Limit for how long it will search
@@ -454,12 +469,12 @@ class Router(object):
             if nextItem["mandatoryNodes"]:
                 self.nodeWasFullySerched = False
                 nextNode = nextItem["mandatoryNodes"].pop(0)
-                if consideredNode in self.data.routing.keys() and nextNode in self.data.routing.get(consideredNode, {}).keys():
-                    self._addToQueue(consideredNode, nextNode, nextItem, self.data.routing[consideredNode][nextNode])
+                if consideredNode in self.routing.keys() and nextNode in self.routing.get(consideredNode, {}).keys():
+                    self._addToQueue(consideredNode, nextNode, nextItem, self.routing[consideredNode][nextNode])
 
             # If no, add all possible nodes from x to queue
-            elif consideredNode in self.data.routing.keys():
-                for nextNode, weight in self.data.routing[consideredNode].items():
+            elif consideredNode in self.routing.keys():
+                for nextNode, weight in self.routing[consideredNode].items():
                     if nextNode not in self.closed:
                         self._addToQueue(consideredNode, nextNode, nextItem, weight)
 
@@ -472,11 +487,11 @@ class Router(object):
     def _addToQueue(self, start, end, queueSoFar, weight=1):
         """Add another potential route to the queue"""
         # Assume start and end nodes have positions
-        if end not in self.data.rnodes or start not in self.data.rnodes:
+        if end not in self.rnodes or start not in self.rnodes:
             return
 
         # Get data around end node
-        self.data.getArea(self.data.rnodes[end][0], self.data.rnodes[end][1])
+        self.getArea(self.rnodes[end][0], self.rnodes[end][1])
 
         # Ignore if route is not traversible
         if weight == 0:
@@ -486,13 +501,13 @@ class Router(object):
         if len(queueSoFar["nodes"].split(",")) >= 2 and queueSoFar["nodes"].split(",")[-2] == str(end):
             return
 
-        edgeCost = self.data.distance(self.data.rnodes[start], self.data.rnodes[end]) / weight
+        edgeCost = self.distance(self.rnodes[start], self.rnodes[end]) / weight
         totalCost = queueSoFar["cost"] + edgeCost
-        heuristicCost = totalCost + self.data.distance(self.data.rnodes[end], self.data.rnodes[self.searchEnd])
+        heuristicCost = totalCost + self.distance(self.rnodes[end], self.rnodes[self.searchEnd])
         allNodes = queueSoFar["nodes"] + "," + str(end)
 
         # Check if path queueSoFar+end is not forbidden
-        for i in self.data.forbiddenMoves:
+        for i in self.forbiddenMoves:
             if i in allNodes:
                 self.nodeWasFullySerched = False
                 return
@@ -517,7 +532,7 @@ class Router(object):
         if queueSoFar.get("mandatoryNodes", None):
             forceNextNodes = queueSoFar["mandatoryNodes"]
         else:
-            for activationNodes, nextNodes in self.data.mandatoryMoves.items():
+            for activationNodes, nextNodes in self.mandatoryMoves.items():
                 if allNodes.endswith(activationNodes):
                     self.nodeWasFullySerched = False
                     forceNextNodes = nextNodes.copy()
