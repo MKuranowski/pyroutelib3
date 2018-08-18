@@ -50,7 +50,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.9pre8"
+__version__ = "1.0"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -202,7 +202,7 @@ class Datastore:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        # In versions prior to 0.9 tiles were saved to tilescache/z/x/y/data.osm.pkl
+        # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
         elif os.path.exists(filename + ".pkl"):
             os.rename(filename + ".pkl", filename)
 
