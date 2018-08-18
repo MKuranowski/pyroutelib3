@@ -30,17 +30,17 @@
 #  2017-10-11  MK   Access keys
 #  2018-01-07  MK   Oneway:<Transport> tags & New distance function
 #  2018-08-14  MK   Turn restrictions
+#  2018-08-18  MK   New data download function
 #----------------------------------------------------------------------------
 import os
 import re
 import sys
 import math
-import osmapi
+import time
 import dateutil.parser
 import xml.etree.ElementTree as etree
 from collections import OrderedDict
 from datetime import datetime
-from . import (tiledata, tilenames)
 
 
 __title__ = "pyroutelib3"
@@ -86,9 +86,26 @@ TYPES = {
         "access": []}
 }
 
+def _whichTile(lat, lon, zoom):
+    """Determine in which tile the given lat, lon lays"""
+    n = 2 ** zoom
+    x = n * ((lon + 180) / 360)
+    y = n * ((1 - math.log(math.tan(math.radians(lat)) + (1 / math.cos(math.radians(lat)))) / math.pi) / 2)
+    return int(x), int(y), int(zoom)
+
+def _tileBoundary(x, y, z):
+    """Return (left, bottom, right, top) of bbox of given tile"""
+    n = 2 ** z
+    mercToLat = lambda x: math.degrees(math.atan(math.sinh(x)))
+    top = mercToLat(math.pi * (1 - 2 * (y * (1/n))))
+    bottom = mercToLat(math.pi * (1 - 2 * ((y+1) * (1/n))))
+    left = x * (360/n) -180
+    right = left + (360/n)
+    return left, bottom, right, top
+
 class Datastore:
     """Parse an OSM file looking for routing information"""
-    def __init__(self, transport, localfile=False):
+    def __init__(self, transport, localfile=False, expire_data=30):
         """Initialise an OSM-file parser"""
         # Routing data
         self.routing = {}
@@ -98,6 +115,7 @@ class Datastore:
 
         # Info about OSM
         self.tiles = set()
+        self.expire_data = 86400 * expire_data # expire_data is in days, we preofrm calculations in seconds
         self.localFile = bool(localfile)
 
         # Dict-type custom transport weights
@@ -114,11 +132,6 @@ class Datastore:
         # Load local file if it was passed
         if self.localFile:
             self.loadOsm(localfile)
-            self.api = None
-
-        # Otherwise use OSM API
-        else:
-            self.api = osmapi.OsmApi(api="api.openstreetmap.org")
 
     def _allowedVehicle(self, tags):
         "Check way against access tags"
@@ -174,16 +187,34 @@ class Datastore:
         if self.localFile: return
 
         # Get info on tile in wich lat, lon lays
-        z = tiledata.DownloadLevel()
-        x, y = tilenames.tileXY(lat, lon, z)
-        tile_id = "{0},{1}".format(x, y)
+        x, y, z = _whichTile(lat, lon, 15)
+        tileId = "{0},{1}".format(x, y)
 
         # Don't redownload tiles
-        if tile_id in self.tiles: return
+        if tileId in self.tiles: return
 
-        # Load tile data
-        self.tiles.add(tile_id)
-        filename = tiledata.GetOsmTileData(z,x,y)
+        # Download tile data
+        self.tiles.add(tileId)
+        directory = os.path.join("tilescache", "15", str(x), str(y))
+        filename = os.path.join(directory, "data.osm")
+
+        # Make sure directory to which we download .osm filess exists
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # In versions prior to 0.9 tiles were saved to tilescache/z/x/y/data.osm.pkl
+        elif os.path.exists(filename + ".pkl"):
+            os.rename(filename + ".pkl", filename)
+
+        # Don't redownload data from pre-expire date
+        try:
+            downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
+        except OSError:
+            downloadedSecondsAgo = math.inf
+
+        if downloadedSecondsAgo >= self.expire_data:
+             urlretrieve("https://api.openstreetmap.org/api/0.6/map?bbox={0},{1},{2},{3}".format(_tileBoundary(x, y, 15)), filename)
+
         self.loadOsm(filename)
 
     def parseOsmFile(self, file):
@@ -362,7 +393,7 @@ class Datastore:
         """Find the nearest node that can be the start of a route"""
         # Get area around location we're trying to find
         self.getArea(lat, lon)
-        maxDist, closestNode = float("inf"), None
+        maxDist, closestNode = math.inf, None
 
         # Iterate over nodes and overwrite closest_node if it's closer
         for nodeId, nodePos in self.rnodes.items():
