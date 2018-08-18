@@ -50,7 +50,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "0.9pre6"
+__version__ = "0.9pre7"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -86,24 +86,37 @@ TYPES = {
         "access": []}
 }
 
-class Datastore(object):
+class Datastore:
     """Parse an OSM file looking for routing information"""
-    def __init__(self, transport, localfile=""):
+    def __init__(self, transport, localfile=False):
         """Initialise an OSM-file parser"""
+        # Routing data
         self.routing = {}
         self.rnodes = {}
         self.mandatoryMoves = {}
         self.forbiddenMoves = set()
 
-        self.tiles = []
-        self.transport = transport if transport != "cycle" else "bicycle" # Osm uses bicycle in tags
-        self.localFile = localfile
-        self.type = TYPES[transport]
+        # Info about OSM
+        self.tiles = set()
+        self.localFile = bool(localfile)
 
+        # Dict-type custom transport weights
+        if isinstance(transport, dict):
+            # Check if required info is in given transport dict
+            assert {"name", "access", "weights"}.issubset(transport.keys())
+            self.transport = transport["name"]
+            self.type = transport
+
+        else:
+            self.transport = transport if transport != "cycle" else "bicycle" # Osm uses bicycle in tags
+            self.type = TYPES[transport].copy()
+
+        # Load local file if it was passed
         if self.localFile:
-            self.loadOsm(self.localFile)
+            self.loadOsm(localfile)
             self.api = None
 
+        # Otherwise use OSM API
         else:
             self.api = osmapi.OsmApi(api="api.openstreetmap.org")
 
@@ -116,12 +129,13 @@ class Datastore(object):
         # Priority is ascending in the access array
         for key in self.type["access"]:
             if key in tags:
-                if tags[key] in ("no", "private"): allowed = False
+                if tags[key] in ["no", "private"]: allowed = False
                 else: allowed =  True
 
-        return(allowed)
+        return allowed
 
     def _attributes(self, element):
+        """Get OSM element atttributes and do some common type conversion"""
         result = {}
         for k, v in element.attrib.items():
             if k == "uid": v = int(v)
@@ -141,22 +155,36 @@ class Datastore(object):
             result[k] = v
         return result
 
+    def distance(self, n1, n2):
+        """Calculate distance in km between two nodes using haversine forumla"""
+        lat1, lon1 = n1[0], n1[1]
+        lat2, lon2 = n2[0], n2[1]
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        d = math.sin(dlat * 0.5) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon * 0.5) ** 2
+        return math.asin(math.sqrt(d)) * 12742
+
+    def nodeLatLon(self, node):
+        """Get node's lat lon"""
+        return self.rnodes[node]
+
     def getArea(self, lat, lon):
-        """Download data in the vicinity of a lat/long.
-        Return filename to existing or newly downloaded .osm file."""
+        """Download data in the vicinity of a lat/long"""
+        # Don't download data if we loaded a custom OSM file
+        if self.localFile: return
 
+        # Get info on tile in wich lat, lon lays
         z = tiledata.DownloadLevel()
-        (x,y) = tilenames.tileXY(lat, lon, z)
+        x, y = tilenames.tileXY(lat, lon, z)
+        tile_id = "{0},{1}".format(x, y)
 
-        tileID = '%d,%d'%(x,y)
-        if self.localFile or tileID in self.tiles:
-            return
+        # Don't redownload tiles
+        if tile_id in self.tiles: return
 
-        self.tiles.append(tileID)
-
+        # Load tile data
+        self.tiles.add(tile_id)
         filename = tiledata.GetOsmTileData(z,x,y)
-        #print "Loading %d,%d at z%d from %s" % (x,y,z,filename)
-        return(self.loadOsm(filename))
+        self.loadOsm(filename)
 
     def parseOsmFile(self, file):
         nodes, ways, relations = {}, {}, {}
@@ -194,62 +222,62 @@ class Datastore(object):
     def loadOsm(self, file):
         nodes, ways, relations = self.parseOsmFile(file)
 
-        for way_id, way_data in ways.items():
-            way_nodes = []
-            for nd in way_data['nd']:
+        for wayId, wayData in ways.items():
+            wayNodes = []
+            for nd in wayData["nd"]:
                 if nd not in nodes: continue
-                way_nodes.append([nodes[nd]['id'], nodes[nd]['lat'], nodes[nd]['lon']])
-            self.storeWay(way_id, way_data['tag'], way_nodes)
+                wayNodes.append((nodes[nd]["id"], nodes[nd]["lat"], nodes[nd]["lon"]))
+            self.storeWay(wayId, wayData["tag"], wayNodes)
 
-        for rel_id, rel_data in relations.items():
+        for relId, relData in relations.items():
             try:
                 # Ignore reltions which are not restrictions
-                if rel_data["tag"].get("type") not in ("restriction", "restriction:" + self.transport): continue
+                if relData["tag"].get("type") not in ("restriction", "restriction:" + self.transport): continue
 
                 # Ignore restriction if except tag points to any "access" values
-                if set(rel_data["tag"].get("except", "").split(";")).intersection(self.type["access"]): continue
+                if set(relData["tag"].get("except", "").split(";")).intersection(self.type["access"]): continue
 
                 # Ignore foot restrictions unless explicitly stated
-                if self.transport == "foot" and rel_data["tag"].get("type") != "restriction:foot" and \
-                         "restriction:foot" not in rel_data["tag"].keys():
+                if self.transport == "foot" and relData["tag"].get("type") != "restriction:foot" and \
+                         "restriction:foot" not in relData["tag"].keys():
                     continue
 
-                restriction_type = rel_data["tag"].get("restriction:" + self.transport, rel_data["tag"]["restriction"])
+                restrictionType = relData["tag"].get("restriction:" + self.transport) or relData["tag"]["restriction"]
 
                 nodes = []
-                from_member = [i for i in rel_data["member"] if i["role"] == "from"][0]
-                to_member = [i for i in rel_data["member"] if i["role"] == "to"][0]
+                fromMember = [i for i in relData["member"] if i["role"] == "from"][0]
+                toMember = [i for i in relData["member"] if i["role"] == "to"][0]
 
-                for via_member in [i for i in rel_data["member"] if i["role"] == "via"]:
-                    if via_member["type"] == "way": nodes.append(ways[int(via_member["ref"])]["nd"])
-                    else: nodes.append([int(via_member["ref"])])
+                for viaMember in [i for i in relData["member"] if i["role"] == "via"]:
+                    if viaMember["type"] == "way": nodes.append(ways[int(viaMember["ref"])]["nd"])
+                    else: nodes.append([int(viaMember["ref"])])
 
-                nodes.insert(0, ways[int(from_member["ref"])]["nd"])
-                nodes.append(ways[int(to_member["ref"])]["nd"])
+                nodes.insert(0, ways[int(fromMember["ref"])]["nd"])
+                nodes.append(ways[int(toMember["ref"])]["nd"])
 
-                self.storeRestriction(rel_id, restriction_type, nodes)
+                self.storeRestriction(relId, restrictionType, nodes)
 
             except (KeyError, AssertionError, IndexError):
                 continue
 
-    def storeRestriction(self, rel_id, restriction_type, members):
+    def storeRestriction(self, relId, restrictionType, members):
         # Order members of restriction, so that members look somewhat like this: ([a, b], [b, c], [c], [c, d, e], [e, f])
         for x in range(len(members)-1):
-            common_node = (set(members[x]).intersection(set(members[x+1]))).pop()
+            commonNode = (set(members[x]).intersection(set(members[x+1]))).pop()
 
             # If first node of member[x+1] is different then common_node, try to reverse it
-            if members[x+1][0] != common_node:
+            if members[x+1][0] != commonNode:
                 members[x+1].reverse()
 
             # Only the "from" way can be reversed while ordering the nodes,
             # Otherwise, the x way could be reversed twice (as member[x] and member[x+1])
-            if x == 0 and members[x][-1] != common_node:
+            if x == 0 and members[x][-1] != commonNode:
                 members[x].reverse()
 
             # Assume member[x] and member[x+1] are ordered correctly
             assert members[x][-1] == members[x+1][0]
 
-        if restriction_type.startswith("no_"):
+        if restrictionType.startswith("no_"):
             # Start by denoting 'from>via'
             forbid = "{},{},".format(members[0][-2], members[1][0])
 
@@ -262,9 +290,9 @@ class Datastore(object):
 
             self.forbiddenMoves.add(forbid)
 
-        elif restriction_type.startswith("only_"):
+        elif restrictionType.startswith("only_"):
             force = []
-            force_activator = "{},{}".format(members[0][-2], members[1][0])
+            forceActivator = "{},{}".format(members[0][-2], members[1][0])
 
             # Add all via members
             for x in range(1, len(members)-1):
@@ -273,9 +301,9 @@ class Datastore(object):
             # Finalize by denoting 'via>to'
             force.append(members[-1][1])
 
-            self.mandatoryMoves[force_activator] = force
+            self.mandatoryMoves[forceActivator] = force
 
-    def storeWay(self, way_id, tags, nodes):
+    def storeWay(self, wayId, tags, nodes):
         highway = self.equivalent(tags.get("highway", ""))
         railway = self.equivalent(tags.get("railway", ""))
         oneway = tags.get("oneway", "")
@@ -297,24 +325,24 @@ class Datastore(object):
 
         # Store routing information
         for index in range(1, len(nodes)):
-            node1_id, node1_lat, node1_lon = nodes[index - 1]
-            node2_id, node2_lat, node2_lon = nodes[index]
+            node1Id, node1Lat, node1Lon = nodes[index - 1]
+            node2Id, node2Lat, node2Lon = nodes[index]
 
             # Check if nodes' positions are stored
-            if node1_id not in self.rnodes.keys(): self.rnodes[node1_id] = (node1_lat, node1_lon)
-            if node2_id not in self.rnodes.keys(): self.rnodes[node2_id] = (node2_lat, node2_lon)
+            if node1Id not in self.rnodes.keys(): self.rnodes[node1Id] = (node1Lat, node1Lon)
+            if node2Id not in self.rnodes.keys(): self.rnodes[node2Id] = (node2Lat, node2Lon)
 
             # Check if nodes have dicts for storing travel costs
-            if node1_id not in self.routing.keys(): self.routing[node1_id] = {}
-            if node2_id not in self.routing.keys(): self.routing[node2_id] = {}
+            if node1Id not in self.routing.keys(): self.routing[node1Id] = {}
+            if node2Id not in self.routing.keys(): self.routing[node2Id] = {}
 
             # Is way traversible forward?
             if oneway not in ["-1", "reverse"] or self.tranport == "foot":
-                self.routing[node1_id][node2_id] = weight
+                self.routing[node1Id][node2Id] = weight
 
             # Is way traversible backword?
             if oneway not in ["yes", "true", "1"] or self.transport == "foot":
-                self.routing[node2_id][node1_id] = weight
+                self.routing[node2Id][node1Id] = weight
 
     def equivalent(self, tag):
         """Simplifies a bunch of tags to nearly-equivalent ones"""
@@ -328,25 +356,22 @@ class Datastore(object):
             "pedestrian": "footway",
             "platform": "footway",
         }
-        try: return(equivalent[tag])
-        except KeyError: return(tag)
+        return equivalent.get(tag, tag)
 
     def findNode(self, lat, lon):
         """Find the nearest node that can be the start of a route"""
-        self.getArea(lat,lon)
-        maxDist = 1E+20
-        nodeFound = None
-        posFound = None
-        for (node_id,pos) in list(self.rnodes.items()):
-            dy = pos[0] - lat
-            dx = pos[1] - lon
-            dist = dx * dx + dy * dy
-            if(dist < maxDist):
-                maxDist = dist
-                nodeFound = node_id
-                posFound = pos
-        # print("found at %s"%str(posFound))
-        return(nodeFound)
+        # Get area around location we're trying to find
+        self.getArea(lat, lon)
+        maxDist, closestNode = float("inf"), None
+
+        # Iterate over nodes and overwrite closest_node if it's closer
+        for nodeId, nodePos in self.rnodes.items():
+            distanceDiff = self.distance(nodePos, (lat, lon))
+            if distanceDiff < maxDist:
+                maxDist = distanceDiff
+                closestNode = nodeId
+
+        return closestNode
 
     def report(self):
         """Display some info about the loaded data"""
@@ -357,82 +382,69 @@ class Router(object):
     def __init__(self, transport, localfile=""):
         self.data = Datastore(transport, localfile)
 
-    def distance(self, n1, n2):
-        """Calculate distance in km between two nodes using haversine forumla"""
-        lat1, lon1 = map(math.radians, self.data.rnodes[n1])
-        lat2, lon2 = map(math.radians, self.data.rnodes[n2])
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        d = math.sin(dlat * 0.5) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon * 0.5) ** 2
-        return math.asin(math.sqrt(d)) * 12742
-
-    def nodeLatLon(self, node):
-        """Get node's lat lon"""
-        lat, lon = self.data.rnodes[node][0], self.data.rnodes[node][1]
-        return([lat, lon])
-
     def doRoute(self, start, end):
         """Do the routing"""
         self.searchEnd = end
-        self.closed = [start]
+        self.closed = {start}
         self.queue = []
+        self.nodeWasFullySerched = True
 
         # Start by queueing all outbound links from the start node
-        blankQueueItem = {'end':-1,'cost':0,'nodes':str(start)}
-
         if start not in self.data.routing.keys():
-            return 'no_such_node', []
+            return "no_such_node", []
+
         else:
-            for i, weight in self.data.routing[start].items():
-                self._addToQueue(start, i, blankQueueItem, weight)
+            for linked_node, weight in self.data.routing[start].items():
+                self._addToQueue(start, linked_node, {"cost": 0, "nodes": str(start)}, weight)
 
         # Limit for how long it will search
         count = 0
         while count < 1000000:
-            count = count + 1
+            count += 1
             self.nodeWasFullySerched = True
+
+            # Pop first item from queue for routing. If queue it's empty - it means no route exists
             if len(self.queue) > 0:
                 nextItem = self.queue.pop(0)
             else:
-                return 'no_route', []
+                return "no_route", []
 
-            x = nextItem['end']
-            if x in self.closed: continue
-            if x == end:
-                # Found the end node - success
-                return 'success', [int(i) for i in nextItem['nodes'].split(",")]
+            consideredNode = nextItem["end"]
+
+            # If we already visited the node, ignore it
+            if consideredNode in self.closed:
+                continue
+
+            # Found the end node - success
+            if consideredNode == self.searchEnd:
+                return "success", [int(i) for i in nextItem["nodes"].split(",")]
 
             # Check if we preform a mandatory turn
-            if nextItem['mandatoryNodes']:
+            if nextItem["mandatoryNodes"]:
                 self.nodeWasFullySerched = False
-                y = nextItem['mandatoryNodes'].pop(0)
-                if x in self.data.routing.keys() and y in self.data.routing.get(x, {}).keys():
-                    self._addToQueue(x, y, nextItem, self.data.routing[x][y])
+                nextNode = nextItem["mandatoryNodes"].pop(0)
+                if consideredNode in self.data.routing.keys() and nextNode in self.data.routing.get(consideredNode, {}).keys():
+                    self._addToQueue(consideredNode, nextNode, nextItem, self.data.routing[consideredNode][nextNode])
 
             # If no, add all possible nodes from x to queue
-            elif x in self.data.routing.keys():
-                for y, weight in self.data.routing[x].items():
-                    if y not in self.closed:
-                        self._addToQueue(x, y, nextItem, weight)
+            elif consideredNode in self.data.routing.keys():
+                for nextNode, weight in self.data.routing[consideredNode].items():
+                    if nextNode not in self.closed:
+                        self._addToQueue(consideredNode, nextNode, nextItem, weight)
 
             if self.nodeWasFullySerched:
-                self.closed.append(x)
+                self.closed.add(consideredNode)
 
         else:
-            return 'gave_up', []
+            return "gave_up", []
 
     def _addToQueue(self, start, end, queueSoFar, weight=1):
         """Add another potential route to the queue"""
-
         # Assume start and end nodes have positions
         if end not in self.data.rnodes or start not in self.data.rnodes:
             return
 
-        # getArea() checks that map data is available around the end-point,
-        # and downloads it if necessary
-        #
-        # TODO: we could reduce downloads even more by only getting data around
-        # the tip of the route, rather than around all nodes linked from the tip
+        # Get data around end node
         self.data.getArea(self.data.rnodes[end][0], self.data.rnodes[end][1])
 
         # Ignore if route is not traversible
@@ -440,13 +452,13 @@ class Router(object):
             return
 
         # Do not turn around at a node (don't do this: a-b-a)
-        if len(queueSoFar['nodes'].split(",")) >= 2 and queueSoFar['nodes'].split(",")[-2] == str(end):
+        if len(queueSoFar["nodes"].split(",")) >= 2 and queueSoFar["nodes"].split(",")[-2] == str(end):
             return
 
-        edgeCost = self.distance(start, end) / weight
-        totalCost = queueSoFar['cost'] + edgeCost
-        heuristicCost = totalCost + self.distance(end, self.searchEnd)
-        allNodes = queueSoFar['nodes'] + "," + str(end)
+        edgeCost = self.data.distance(self.data.rnodes[start], self.data.rnodes[end]) / weight
+        totalCost = queueSoFar["cost"] + edgeCost
+        heuristicCost = totalCost + self.data.distance(self.data.rnodes[end], self.data.rnodes[self.searchEnd])
+        allNodes = queueSoFar["nodes"] + "," + str(end)
 
         # Check if path queueSoFar+end is not forbidden
         for i in self.data.forbiddenMoves:
@@ -457,12 +469,12 @@ class Router(object):
         # Check if we have a way to 'end' node
         endQueueItem = None
         for i in self.queue:
-            if i['end'] == end:
+            if i["end"] == end:
                 endQueueItem = i
                 break
 
         # If we do, and known totalCost to end is lower we can ignore the queueSoFar path
-        if endQueueItem and endQueueItem['cost'] < totalCost:
+        if endQueueItem and endQueueItem["cost"] < totalCost:
             return
 
         # If the queued way to end has higher total cost, remove it (and add the queueSoFar scenario, as it's cheaper)
@@ -471,8 +483,8 @@ class Router(object):
 
         # Check against mandatory turns
         forceNextNodes = None
-        if queueSoFar.get('mandatoryNodes', None):
-            forceNextNodes = queueSoFar['mandatoryNodes']
+        if queueSoFar.get("mandatoryNodes", None):
+            forceNextNodes = queueSoFar["mandatoryNodes"]
         else:
             for activationNodes, nextNodes in self.data.mandatoryMoves.items():
                 if allNodes.endswith(activationNodes):
@@ -482,19 +494,20 @@ class Router(object):
 
         # Create a hash for all the route's attributes
         queueItem = { \
-            'cost': totalCost,
-            'heuristicCost': heuristicCost,
-            'nodes': allNodes,
-            'end': end,
-            'mandatoryNodes': forceNextNodes
+            "cost": totalCost,
+            "heuristicCost": heuristicCost,
+            "nodes": allNodes,
+            "end": end,
+            "mandatoryNodes": forceNextNodes
         }
 
         # Try to insert, keeping the queue ordered by decreasing heuristic cost
         count = 0
         for test in self.queue:
-            if test['heuristicCost'] > queueItem['heuristicCost']:
+            if test["heuristicCost"] > queueItem["heuristicCost"]:
                 self.queue.insert(count, queueItem)
                 break
             count += 1
+
         else:
             self.queue.append(queueItem)
