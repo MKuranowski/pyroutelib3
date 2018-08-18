@@ -5,12 +5,12 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
   name = "pyroutelib3",
-  packages = ["pyroutelib3"],
+  py_modules = ["pyroutelib3"],
   license = "GPL v3",
   version = "0.8",
   description = "Library for simple routing on OSM data",
   long_description = readme,
-  long_description_content_type = "text/markdown"
+  long_description_content_type = "text/markdown",
   author = "Oliver White",
   maintainer = "Mikolaj Kuranowski",
   maintainer_email = "mkuranowski@gmail.com",
