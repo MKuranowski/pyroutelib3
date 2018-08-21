@@ -7,7 +7,7 @@ setup(
   name = "pyroutelib3",
   py_modules = ["pyroutelib3"],
   license = "GPL v3",
-  version = "1.0",
+  version = "1.0post1",
   description = "Library for simple routing on OSM data",
   long_description = readme,
   long_description_content_type = "text/markdown",
@@ -15,7 +15,7 @@ setup(
   maintainer = "Mikolaj Kuranowski",
   maintainer_email = "mkuranowski@gmail.com",
   url = "https://github.com/MKuranowski/pyroutelib3",
-  download_url = "https://github.com/MKuranowski/pyroutelib3/archive/1.0.tar.gz",
+  download_url = "https://github.com/MKuranowski/pyroutelib3/archive/1.0.post1.tar.gz",
   keywords = "osm routing pyroutelib",
   classifiers = [],
   install_requires = ["osmapi", "python-dateutil"]
