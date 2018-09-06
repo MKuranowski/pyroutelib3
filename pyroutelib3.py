@@ -51,7 +51,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.0post1"
+__version__ = "1.0post2"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -374,7 +374,7 @@ class Datastore:
             if node2Id not in self.routing.keys(): self.routing[node2Id] = {}
 
             # Is way traversible forward?
-            if oneway not in ["-1", "reverse"] or self.tranport == "foot":
+            if oneway not in ["-1", "reverse"] or self.transport == "foot":
                 self.routing[node1Id][node2Id] = weight
 
             # Is way traversible backword?
