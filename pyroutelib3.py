@@ -51,7 +51,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.1"
+__version__ = "1.2pre1"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -346,10 +346,10 @@ class Datastore:
         oneway = tags.get("oneway", "")
 
         # Oneway is default on roundabouts
-        if not oneway and tags.get("junction", "") in ["roundabout", "circular"]:
+        if not oneway and (tags.get("junction", "") in ["roundabout", "circular"] or highway == "motorway"):
             oneway = "yes"
 
-        if oneway in ["yes", "true", "1", "-1"] and tags.get("oneway:" + self.transport, "yes") == "no":
+        if self.transport == "foot" or (oneway in ["yes", "true", "1", "-1"] and tags.get("oneway:" + self.transport, "yes") == "no"):
             oneway = "no"
 
         # Calculate what vehicles can use this route
@@ -374,11 +374,11 @@ class Datastore:
             if node2Id not in self.routing.keys(): self.routing[node2Id] = {}
 
             # Is way traversible forward?
-            if oneway not in ["-1", "reverse"] or self.transport == "foot":
+            if oneway not in ["-1", "reverse"]:
                 self.routing[node1Id][node2Id] = weight
 
             # Is way traversible backword?
-            if oneway not in ["yes", "true", "1"] or self.transport == "foot":
+            if oneway not in ["yes", "true", "1"]:
                 self.routing[node2Id][node1Id] = weight
 
     def equivalent(self, tag):
