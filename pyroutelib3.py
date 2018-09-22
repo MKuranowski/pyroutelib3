@@ -78,13 +78,13 @@ TYPES = {
         "weights": {"trunk": 0.3, "primary": 0.6, "secondary": 0.95, "tertiary": 1,
             "unclassified": 1, "residential": 1, "track": 1, "service": 1,
             "bridleway": 1, "footway": 1.2, "path": 1.2, "steps": 1.15},
-        "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
+        "access": ["access", "foot"]},
     "tram": {
         "weights": {"tram": 1, "light_rail": 1},
-        "access": []},
+        "access": ["access"]},
     "train": {
         "weights": {"rail": 1, "light_rail": 1, "subway": 1, "narrow_guage": 1},
-        "access": []}
+        "access": ["access"]}
 }
 
 def _whichTile(lat, lon, zoom):
