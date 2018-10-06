@@ -175,7 +175,7 @@ class Datastore:
         lat2, lon2 = n2[0], n2[1]
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        d = math.sin(dlat * 0.5) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon * 0.5) ** 2
+        d = math.sin(math.radians(dlat) * 0.5) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(math.radians(dlon) * 0.5) ** 2
         return math.asin(math.sqrt(d)) * 12742
 
     def nodeLatLon(self, node):
