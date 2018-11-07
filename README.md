@@ -40,7 +40,7 @@ router = Router("<transport mode>", "<path-to-.osm-file>")
 
 For more advanced info on using pyroutelib3 (like cusotmizing way costs) take a look at the wiki: https://github.com/MKuranowski/pyroutelib3/wiki.
 
-## Chenges from pyroutelib2
+## Changes from pyroutelib2
 - Porting to python3
 - Making pyroutelib a package
 - Custom transport types
