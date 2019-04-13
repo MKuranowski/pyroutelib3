@@ -116,7 +116,7 @@ class Datastore:
 
         # Info about OSM
         self.tiles = set()
-        self.expire_data = 86400 * expire_data # expire_data is in days, we preofrm calculations in seconds
+        self.expire_data = 86400 * expire_data # expire_data is in days, we preform calculations in seconds
         self.localFile = bool(localfile)
 
         # Dict-type custom transport weights
@@ -199,7 +199,7 @@ class Datastore:
         directory = os.path.join("tilescache", "15", str(x), str(y))
         filename = os.path.join(directory, "data.osm")
 
-        # Make sure directory to which we download .osm filess exists
+        # Make sure directory to which we download .osm files exists
         if not os.path.exists(directory):
             os.makedirs(directory)
 
