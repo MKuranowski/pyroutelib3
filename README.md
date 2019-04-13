@@ -23,7 +23,7 @@ if status == 'success':
 ```
 **Transport Modes**: car, cycle, foot, horse, tram, train
 
-**Statuses**: success, no_route, no_such_node, gave_up
+**Statuses**: success, no_route, gave_up
 
 
 ##### Offline Routing

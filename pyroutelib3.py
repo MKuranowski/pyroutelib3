@@ -519,7 +519,7 @@ class Router(Datastore):
 
         # Start by queueing all outbound links from the start node
         if start not in self.routing.keys():
-            return "no_such_node", []
+            raise KeyError, "node {} doesn't exist in the graph".format(start)
 
         elif start == end:
             return "no_route", []
