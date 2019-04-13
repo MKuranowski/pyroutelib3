@@ -18,5 +18,5 @@ setup(
   download_url = "https://github.com/MKuranowski/pyroutelib3/archive/1.2.tar.gz",
   keywords = "osm routing pyroutelib",
   classifiers = [],
-  install_requires = ["osmapi", "python-dateutil"]
+  install_requires = ["python-dateutil"]
 )
