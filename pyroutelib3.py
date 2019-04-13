@@ -4,7 +4,7 @@
 # node_lat, node_lon = Router().data.rnodes[node_id][0], Router().data.rnodes[node_id][1]
 #----------------------------------------------------------------------------
 # Copyright 2007, Oliver White
-# Modifications: Copyright 2017, Mikolaj Kuranowski -
+# Modifications: Copyright 2017-2019, Mikolaj Kuranowski -
 # Based on https://github.com/gaulinmp/pyroutelib2
 #----------------------------------------------------------------------------
 # This file is part of pyroutelib3.
@@ -48,7 +48,7 @@ __title__ = "pyroutelib3"
 __description__ = "Library for simple routing on OSM data"
 __url__ = "https://github.com/MKuranowski/pyroutelib3"
 __author__ = "Oliver White"
-__copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2018, Mikolaj Kuranowski"
+__copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2019, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
 __version__ = "1.2"
