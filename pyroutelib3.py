@@ -51,7 +51,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2019, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.3"
+__version__ = "1.3.post1"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -519,7 +519,7 @@ class Router(Datastore):
 
         # Start by queueing all outbound links from the start node
         if start not in self.routing.keys():
-            raise KeyError, "node {} doesn't exist in the graph".format(start)
+            raise KeyError("node {} doesn't exist in the graph".format(start))
 
         elif start == end:
             return "no_route", []
