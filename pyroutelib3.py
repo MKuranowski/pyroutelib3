@@ -112,10 +112,10 @@ class Datastore:
         self.routing = {}
         self.rnodes = {}
         self.mandatoryMoves = {}
-        self.forbiddenMoves = set()
+        self.forbiddenMoves = {}
 
         # Info about OSM
-        self.tiles = set()
+        self.tiles = {}
         self.expire_data = 86400 * expire_data # expire_data is in days, we preform calculations in seconds
         self.localFile = bool(localfile)
 
@@ -195,7 +195,7 @@ class Datastore:
         if tileId in self.tiles: return
 
         # Download tile data
-        self.tiles.add(tileId)
+        self.tiles[tileId] = True
         directory = os.path.join("tilescache", "15", str(x), str(y))
         filename = os.path.join(directory, "data.osm")
 
@@ -278,7 +278,7 @@ class Datastore:
 
                 # Ignore foot restrictions unless explicitly stated
                 if self.transport == "foot" and relData["tag"].get("type") != "restriction:foot" and \
-                         "restriction:foot" not in relData["tag"].keys():
+                         "restriction:foot" not in relData["tag"]:
                     continue
 
                 restrictionType = relData["tag"].get("restriction:" + self.transport) or relData["tag"]["restriction"]
@@ -327,7 +327,7 @@ class Datastore:
             # Finalize by denoting 'via>to'
             forbid += str(members[-1][1])
 
-            self.forbiddenMoves.add(forbid)
+            self.forbiddenMoves[forbid] = True
 
         elif restrictionType.startswith("only_"):
             force = []
@@ -368,12 +368,12 @@ class Datastore:
             node2Id, node2Lat, node2Lon = nodes[index]
 
             # Check if nodes' positions are stored
-            if node1Id not in self.rnodes.keys(): self.rnodes[node1Id] = (node1Lat, node1Lon)
-            if node2Id not in self.rnodes.keys(): self.rnodes[node2Id] = (node2Lat, node2Lon)
+            if node1Id not in self.rnodes: self.rnodes[node1Id] = (node1Lat, node1Lon)
+            if node2Id not in self.rnodes: self.rnodes[node2Id] = (node2Lat, node2Lon)
 
             # Check if nodes have dicts for storing travel costs
-            if node1Id not in self.routing.keys(): self.routing[node1Id] = {}
-            if node2Id not in self.routing.keys(): self.routing[node2Id] = {}
+            if node1Id not in self.routing: self.routing[node1Id] = {}
+            if node2Id not in self.routing: self.routing[node2Id] = {}
 
             # Is way traversible forward?
             if oneway not in ["-1", "reverse"]:
@@ -414,8 +414,8 @@ class Datastore:
 
     def report(self):
         """Display some info about the loaded data"""
-        print("Loaded %d nodes" % len(list(self.rnodes.keys())))
-        print("Loaded %d %s routes" % (len(list(self.routing.keys())), self.transport))
+        print("Loaded %d nodes" % len(list(self.rnodes)))
+        print("Loaded %d %s routes" % (len(list(self.routing)), self.transport))
 
 class Router(Datastore):
     def __getattr__(self, name):
@@ -518,7 +518,7 @@ class Router(Datastore):
                 _queue.append(queueItem)
 
         # Start by queueing all outbound links from the start node
-        if start not in self.routing.keys():
+        if start not in self.routing:
             raise KeyError("node {} doesn't exist in the graph".format(start))
 
         elif start == end:
@@ -554,11 +554,11 @@ class Router(Datastore):
             if nextItem["mandatoryNodes"]:
                 _closeNode = False
                 nextNode = nextItem["mandatoryNodes"].pop(0)
-                if consideredNode in self.routing.keys() and nextNode in self.routing.get(consideredNode, {}).keys():
+                if consideredNode in self.routing and nextNode in self.routing.get(consideredNode, {}).keys():
                     _addToQueue(consideredNode, nextNode, nextItem, self.routing[consideredNode][nextNode])
 
             # If no, add all possible nodes from x to queue
-            elif consideredNode in self.routing.keys():
+            elif consideredNode in self.routing:
                 for nextNode, weight in self.routing[consideredNode].items():
                     if nextNode not in _closed:
                         _addToQueue(consideredNode, nextNode, nextItem, weight)
