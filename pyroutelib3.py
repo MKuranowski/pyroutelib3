@@ -31,6 +31,7 @@
 #  2018-01-07  MK   Oneway:<Transport> tags & New distance function
 #  2018-08-14  MK   Turn restrictions
 #  2018-08-18  MK   New data download function
+#  2019-09-15  MK   Allow for custom storage classes, instead of default dict
 #----------------------------------------------------------------------------
 import os
 import re
@@ -106,16 +107,16 @@ def _tileBoundary(x, y, z):
 
 class Datastore:
     """Object for storing routing data with basic OSM parsing functionality"""
-    def __init__(self, transport, localfile=False, expire_data=30):
+    def __init__(self, transport, localfile=False, expire_data=30, storage_class=dict):
         """Initialise an OSM-file parser"""
         # Routing data
-        self.routing = {}
-        self.rnodes = {}
-        self.mandatoryMoves = {}
-        self.forbiddenMoves = {}
+        self.routing = storage_class()
+        self.rnodes = storage_class()
+        self.mandatoryMoves = storage_class()
+        self.forbiddenMoves = storage_class()
 
         # Info about OSM
-        self.tiles = {}
+        self.tiles = storage_class()
         self.expire_data = 86400 * expire_data # expire_data is in days, we preform calculations in seconds
         self.localFile = bool(localfile)
 
