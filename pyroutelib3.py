@@ -52,7 +52,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2019, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.3.post1"
+__version__ = "1.4"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
