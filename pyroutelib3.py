@@ -120,6 +120,9 @@ class Datastore:
         self.expire_data = 86400 * expire_data # expire_data is in days, we preform calculations in seconds
         self.localFile = bool(localfile)
 
+        # Parsing/Storage data
+        self.storage_class = storage_class
+
         # Dict-type custom transport weights
         if isinstance(transport, dict):
             # Check if required info is in given transport dict
@@ -224,7 +227,9 @@ class Datastore:
         """Return nodes, ways and realations of given file
            Only highway=* and railway=* ways are returned, and
            only type=restriction (and type=restriction:<transport type>) are returned"""
-        nodes, ways, relations = {}, {}, {}
+        nodes = self.storage_class()
+        ways = self.storage_class()
+        relations = self.storage_class()
 
         # Check if a file-like object was passed
         if hasattr(file, "read"): fp = file
