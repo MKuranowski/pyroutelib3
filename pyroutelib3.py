@@ -166,10 +166,6 @@ class Datastore:
             elif k == "visible": v = (v == "true")
             elif k == "ref": v = int(v)
             elif k == "comments_count": v = int(v)
-            elif k == "timestamp": v = dateutil.parser.parse(v)
-            elif k == "created_at": v = dateutil.parser.parse(v)
-            elif k == "closed_at": v = dateutil.parser.parse(v)
-            elif k == "date": v = dateutil.parser.parse(v)
             result[k] = v
         return result
 
