@@ -32,13 +32,14 @@
 #  2018-08-14  MK   Turn restrictions
 #  2018-08-18  MK   New data download function
 #  2019-09-15  MK   Allow for custom storage classes, instead of default dict
+#  2020-02-14  MK   Use osmiter for data parsing to allow more file types
 #----------------------------------------------------------------------------
 import os
 import re
 import sys
 import math
 import time
-import dateutil.parser
+import osmiter
 import xml.etree.ElementTree as etree
 from warnings import warn
 from datetime import datetime
@@ -52,7 +53,7 @@ __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2019, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.4"
+__version__ = "1.5"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -93,7 +94,7 @@ def _whichTile(lat, lon, zoom):
     n = 2 ** zoom
     x = n * ((lon + 180) / 360)
     y = n * ((1 - math.log(math.tan(math.radians(lat)) + (1 / math.cos(math.radians(lat)))) / math.pi) / 2)
-    return int(x), int(y), int(zoom)
+    return int(x), int(y)
 
 def _tileBoundary(x, y, z):
     """Return (left, bottom, right, top) of bbox of given tile"""
@@ -107,7 +108,7 @@ def _tileBoundary(x, y, z):
 
 class Datastore:
     """Object for storing routing data with basic OSM parsing functionality"""
-    def __init__(self, transport, localfile=False, expire_data=30, storage_class=dict):
+    def __init__(self, transport, localfile=False, localfileType="xml", expire_data=30, storage_class=dict):
         """Initialise an OSM-file parser"""
         # Routing data
         self.routing = storage_class()
@@ -119,6 +120,10 @@ class Datastore:
         self.tiles = storage_class()
         self.expire_data = 86400 * expire_data # expire_data is in days, we preform calculations in seconds
         self.localFile = bool(localfile)
+
+        # verify localFileType
+        if localfileType not in {"xml", "gz", "bz2", "pbf"}:
+            raise ValueError(f"localfileType must be 'xml', 'gz', 'bz2' or 'pbf', not {localfileType!r}")
 
         # Parsing/Storage data
         self.storage_class = storage_class
@@ -136,7 +141,7 @@ class Datastore:
 
         # Load local file if it was passed
         if self.localFile:
-            self.loadOsm(localfile)
+            self.loadOsm(localfile, localfileType)
 
     def _allowedVehicle(self, tags):
         """Check way against access tags"""
@@ -188,7 +193,7 @@ class Datastore:
         if self.localFile: return
 
         # Get info on tile in wich lat, lon lays
-        x, y, z = _whichTile(lat, lon, 15)
+        x, y = _whichTile(lat, lon, 15)
         tileId = "{0},{1}".format(x, y)
 
         # Don't redownload tiles
@@ -217,9 +222,9 @@ class Datastore:
             left, bottom, right, top = _tileBoundary(x, y, 15)
             urlretrieve("https://api.openstreetmap.org/api/0.6/map?bbox={0},{1},{2},{3}".format(left, bottom, right, top), filename)
 
-        self.loadOsm(filename)
+        self.loadOsm(filename, "xml")
 
-    def parseOsmFile(self, file):
+    def parseOsmFile(self, file, filetype):
         """Return nodes, ways and realations of given file
            Only highway=* and railway=* ways are returned, and
            only type=restriction (and type=restriction:<transport type>) are returned"""
@@ -227,39 +232,24 @@ class Datastore:
         ways = self.storage_class()
         relations = self.storage_class()
 
-        # Check if a file-like object was passed
-        if hasattr(file, "read"): fp = file
+        for elem in osmiter.iter_from_osm(file, filetype):
 
-        # If not assume that "file" is a path to file
-        else: fp = open(os.fspath(file), "r", encoding="utf-8")
+            if elem["type"] == "node":
+                nodes[elem["id"]] = elem
 
-        try:
-            for event, elem in etree.iterparse(fp):
-                data = self._attributes(elem)
-                data["tag"] = {i.attrib["k"]: i.attrib["v"] for i in elem.iter("tag")}
+            # Store only potentially routable ways
+            elif elem["type"] == "way" and (elem["tag"].get("highway") or elem["tag"].get("railway")):
+                ways[elem["id"]] = elem
 
-                if elem.tag == "node":
-                    nodes[data["id"]] = data
-
-                # Store only potentially routable ways
-                elif elem.tag == "way" and (data["tag"].get("highway") or data["tag"].get("railway")):
-                    data["nd"] = [int(i.attrib["ref"]) for i in elem.iter("nd")]
-                    ways[data["id"]] = data
-
-                # Store only potential turn restrictions
-                elif elem.tag == "relation" and data["tag"].get("type", "").startswith("restriction"):
-                    data["member"] = [self._attributes(i) for i in elem.iter("member")]
-                    relations[data["id"]] = data
-
-        finally:
-            # Close file if a path was passed
-            if not hasattr(file, "read"): fp.close()
+            # Store only potential turn restrictions
+            elif elem["type"] == "relation" and elem["tag"].get("type", "").startswith("restriction"):
+                relations[elem["id"]] = elem
 
         return nodes, ways, relations
 
-    def loadOsm(self, file):
+    def loadOsm(self, file, filetype="xml"):
         """Load data from OSM file to self"""
-        nodes, ways, relations = self.parseOsmFile(file)
+        nodes, ways, relations = self.parseOsmFile(file, filetype)
 
         for wayId, wayData in ways.items():
             wayNodes = []

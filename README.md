@@ -29,13 +29,24 @@ if status == 'success':
 ##### Offline Routing
 
 If you want to use pyroutelib3 offline or on custom .osm file, you just need to add a second argument to Router:
-Path to the specific osm file:
+Path to the specific osm file. 
 
 ```python
 from pyroutelib3 import Router
 router = Router("<transport mode>", "<path-to-.osm-file>")
 # Continue on doing like in the example above
 ```
+
+
+Starting from 1.5 pyroutelib3 now accepts other file formats then OSM XML: .osm.gz, .osm.bz2 and .osm.pbf.
+However, one has to inform pyroutelib3 what kind of file was provided, like so:
+
+```python
+from pyroutelib3 import Router
+router = Router("<transport mode>", "<path-to-file>", localfileType="<xml/gz/bz2/pbf>")
+```
+
+
 ##### More info
 
 For more advanced info on using pyroutelib3 (like cusotmizing way costs) take a look at the wiki: https://github.com/MKuranowski/pyroutelib3/wiki.

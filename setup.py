@@ -16,8 +16,7 @@ setup(
   maintainer = pyroutelib3.__maintainer__,
   maintainer_email = pyroutelib3.__email__,
   url = pyroutelib3.__url__,
-  download_url = "https://github.com/MKuranowski/pyroutelib3/archive/1.4.tar.gz",
   keywords = "osm routing pyroutelib",
   classifiers = [],
-  install_requires = ["python-dateutil"]
+  install_requires = ["osmiter"],
 )
