@@ -1,4 +1,3 @@
-import pyroutelib3
 from setuptools import setup
 
 with open("README.md", "r", encoding="utf-8") as f:
@@ -7,15 +6,15 @@ with open("README.md", "r", encoding="utf-8") as f:
 setup(
   name = "pyroutelib3",
   py_modules = ["pyroutelib3"],
-  license = pyroutelib3.__license__,
-  version = pyroutelib3.__version__,
-  description = pyroutelib3.__description__,
+  license = "GPL v3",
+  version = "1.5.1",
+  description = "Library for simple routing on OSM data",
   long_description = readme,
   long_description_content_type = "text/markdown",
-  author = pyroutelib3.__url__,
-  maintainer = pyroutelib3.__maintainer__,
-  maintainer_email = pyroutelib3.__email__,
-  url = pyroutelib3.__url__,
+  author = "Oliver White",
+  maintainer = "Mikolaj Kuranowski",
+  maintainer_email = "mkuranowski@gmail.com",
+  url = "https://github.com/MKuranowski/pyroutelib3",
   keywords = "osm routing pyroutelib",
   classifiers = [],
   install_requires = ["osmiter"],
