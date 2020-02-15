@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 #----------------------------------------------------------------------------
 # Loading OSM data and doing routing with it
-# node_lat, node_lon = Router().data.rnodes[node_id][0], Router().data.rnodes[node_id][1]
 #----------------------------------------------------------------------------
 # Copyright 2007, Oliver White
-# Modifications: Copyright 2017-2019, Mikolaj Kuranowski -
+# Modifications: Copyright 2017-2020, Mikolaj Kuranowski -
 # Based on https://github.com/gaulinmp/pyroutelib2
 #----------------------------------------------------------------------------
 # This file is part of pyroutelib3.
@@ -50,10 +49,10 @@ __title__ = "pyroutelib3"
 __description__ = "Library for simple routing on OSM data"
 __url__ = "https://github.com/MKuranowski/pyroutelib3"
 __author__ = "Oliver White"
-__copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2019, Mikolaj Kuranowski"
+__copyright__ = "Copyright 2007, Oliver White; Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "mkuranowski@gmail.com"
 
@@ -157,7 +156,8 @@ class Datastore:
 
         return allowed
 
-    def _attributes(self, element):
+    @staticmethod
+    def _attributes(element):
         """Get OSM element atttributes and do some common type conversion"""
         result = {}
         for k, v in element.attrib.items():
@@ -174,7 +174,8 @@ class Datastore:
             result[k] = v
         return result
 
-    def distance(self, n1, n2):
+    @staticmethod
+    def distance(n1, n2):
         """Calculate distance in km between two nodes using haversine forumla"""
         lat1, lon1 = n1[0], n1[1]
         lat2, lon2 = n2[0], n2[1]
@@ -375,7 +376,8 @@ class Datastore:
             if oneway not in ["yes", "true", "1"]:
                 self.routing[node2Id][node1Id] = weight
 
-    def equivalent(self, tag):
+    @staticmethod
+    def equivalent(tag):
         """Simplifies a bunch of tags to nearly-equivalent ones"""
         equivalent = { \
             "motorway_link": "motorway",
