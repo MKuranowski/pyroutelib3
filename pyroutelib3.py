@@ -32,6 +32,7 @@
 #  2018-08-18  MK   New data download function
 #  2019-09-15  MK   Allow for custom storage classes, instead of default dict
 #  2020-02-14  MK   Use osmiter for data parsing to allow more file types
+#  2020-05-08  MK   Make use of hashing in turn restriction handling
 # ---------------------------------------------------------------------------
 import os
 import re
@@ -119,6 +120,16 @@ def _tileBoundary(x, y, z):
     left = x * (360 / n) - 180
     right = left + (360 / n)
     return left, bottom, right, top
+
+def _flatternAndRemoveDupes(x):
+    result = []
+    prev = None
+    for subx in x:
+        for item in subx:
+            if item != prev:
+                prev = item
+                result.append(item)
+    return result
 
 class Datastore:
     """Object for storing routing data"""
@@ -333,26 +344,27 @@ class Datastore:
                 members[x].reverse()
 
             # Assume member[x] and member[x+1] are ordered correctly
-            assert members[x][-1] == members[x + 1][0]
+            if members[x][-1] != members[x + 1][0]:
+                raise ValueError(f"unable to order restriction {relId}")
 
         if restrictionType.startswith("no_"):
-            # TODO: PyPy doesn't like += on string
-            # Start by denoting 'from>via'
-            forbid = f"{members[0][-2]},{members[1][0]},"
+            # Convert all memebers into one list
+            flatMembers = _flatternAndRemoveDupes(members)
 
-            # Add all via members
-            for x in range(1, len(members) - 1):
-                for i in members[x][1:]:
-                    forbid += f"{i},"
+            if len(flatMembers) < 3:
+                raise ValueError(f"invalid turn restriction {relId}")
 
-            # Finalize by denoting 'via>to'
-            forbid += str(members[-1][1])
+            # Create a hash for faster checking
+            forbidHash = tuple(flatMembers[-3:])
 
-            self.forbiddenMoves[forbid] = True
+            if forbidHash in self.forbiddenMoves:
+                self.forbiddenMoves[forbidHash].append(flatMembers)
+            else:
+                self.forbiddenMoves[forbidHash] = [flatMembers]
 
         elif restrictionType.startswith("only_"):
             force = []
-            forceActivator = "{},{}".format(members[0][-2], members[1][0])
+            forceActivator = (members[0][-2], members[1][0])
 
             # Add all via members
             for x in range(1, len(members) - 1):
@@ -447,7 +459,7 @@ class Datastore:
     def report(self):
         """Display some info about the loaded data"""
         edges = sum(len(i) for i in self.routing.values())
-        print(f"Loaded {len(self.rnodes)} nodes" % len(list(self.rnodes)))
+        print(f"Loaded {len(self.rnodes)} nodes")
         print(f"Loaded {edges} {self.transport} edges")
 
 class Router(Datastore):
@@ -491,20 +503,28 @@ class Router(Datastore):
                 return
 
             # Do not turn around at a node (don't do this: a-b-a)
-            if len(queueSoFar["nodes"].split(",")) >= 2 \
-                    and queueSoFar["nodes"].split(",")[-2] == str(end):
+            if len(queueSoFar["nodes"]) >= 2 and queueSoFar["nodes"][-2] == end:
                 return
 
             edgeCost = self.distance(self.rnodes[start], self.rnodes[end]) / weight
             totalCost = queueSoFar["cost"] + edgeCost
             heuristicCost = totalCost + self.distance(self.rnodes[end], self.rnodes[_end])
-            allNodes = queueSoFar["nodes"] + "," + str(end)
+            allNodes = queueSoFar["nodes"] + [end]
 
             # Check if path queueSoFar+end is not forbidden
-            for i in self.forbiddenMoves:
-                if i in allNodes:
-                    _closeNode = False
-                    return
+            if len(allNodes) >= 3:
+                forbidHash = tuple(allNodes[-3:])
+                possibleForbidden = self.forbiddenMoves.get(forbidHash, [])
+
+                for restriction in possibleForbidden:
+                    # If allNodes is shorter then restriction, restriction can't apply
+                    if len(restriction) > len(allNodes):
+                        continue
+
+                    # Check if the end of allNodes is restricted
+                    if allNodes[-len(restriction):] == restriction:
+                        _closeNode = False
+                        return
 
             # Check if we have a way to 'end' node
             endQueueItem = None
@@ -528,11 +548,14 @@ class Router(Datastore):
                 forceNextNodes = queueSoFar["mandatoryNodes"]
 
             else:
-                for activationNodes, nextNodes in self.mandatoryMoves.items():
-                    if allNodes.endswith(activationNodes):
-                        _closeNode = False
-                        forceNextNodes = nextNodes.copy()
-                        break
+                mandatoryActivator = allNodes[-2], allNodes[-1]
+                forceNextNodes = self.mandatoryMoves.get(mandatoryActivator)
+
+                if forceNextNodes:
+                    _closeNode = False
+
+                    # Prevent mutating the list in self.mandatoryMoves
+                    forceNextNodes = forceNextNodes.copy()
 
             # Create a hash for all the route's attributes
             queueItem = {
@@ -563,7 +586,7 @@ class Router(Datastore):
 
         else:
             for linkedNode, weight in self.routing[start].items():
-                _addToQueue(start, linkedNode, {"cost": 0, "nodes": str(start)}, weight)
+                _addToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, weight)
 
         # Limit for how long it will search
         count = 0
@@ -585,7 +608,7 @@ class Router(Datastore):
 
             # Found the end node - success
             if consideredNode == end:
-                return "success", [int(i) for i in nextItem["nodes"].split(",")]
+                return "success", nextItem["nodes"]
 
             # Check if we preform a mandatory turn
             if nextItem["mandatoryNodes"]:
