@@ -54,7 +54,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.5.2"
+__version__ = "1.6.0-a1"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
@@ -175,7 +175,6 @@ class Datastore:
 
     def _allowedVehicle(self, tags):
         """Check way against access tags"""
-
         # Default to true
         allowed = True
 
@@ -214,7 +213,7 @@ class Datastore:
 
         # Get info on tile in wich lat, lon lays
         x, y = _whichTile(lat, lon, 15)
-        tileId = "{0},{1}".format(x, y)
+        tileId = f"{x},{y}"
 
         # Don't redownload tiles
         if tileId in self.tiles:
@@ -301,14 +300,14 @@ class Datastore:
                 if relation_except.intersection(self.type["access"]):
                     continue
 
-                # Ignore foot restrictions unless explicitly stated
+                # Ignore restrictions if on foot, unless explicitly stated in restriction
                 if self.transport == "foot" \
                         and relData["tag"].get("type") != "restriction:foot" \
                         and "restriction:foot" not in relData["tag"]:
                     continue
 
-                restrictionType = relData["tag"].get("restriction:" + self.transport) \
-                    or relData["tag"]["restriction"]
+                restrictionType = relData["tag"].get("restriction:" + self.transport,
+                                                     relData["tag"]["restriction"])
 
                 nodes = []
                 fromMember = [i for i in relData["member"] if i["role"] == "from"][0]
@@ -382,17 +381,16 @@ class Datastore:
         oneway = tags.get("oneway", "")
 
         # Oneway is default on roundabouts
-        if not oneway and (tags.get("junction", "") in ["roundabout", "circular"]
+        if not oneway and (tags.get("junction", "") in {"roundabout", "circular"}
                            or highway == "motorway"):
             oneway = "yes"
 
-        if self.transport == "foot" or (oneway in ["yes", "true", "1", "-1"]
+        if self.transport == "foot" or (oneway in {"yes", "true", "1", "-1"}
                                         and tags.get("oneway:" + self.transport, "yes") == "no"):
             oneway = "no"
 
         # Calculate what vehicles can use this route
-        weight = self.type["weights"].get(highway, 0) \
-            or self.type["weights"].get(railway, 0)
+        weight = self.type["weights"].get(highway, 0) or self.type["weights"].get(railway, 0)
 
         # Check against access tags
         if (not self._allowedVehicle(tags)) or weight <= 0:
@@ -579,7 +577,7 @@ class Router(Datastore):
 
         # Start by queueing all outbound links from the start node
         if start not in self.routing:
-            raise KeyError("node {} doesn't exist in the graph".format(start))
+            raise KeyError(f"node {start} doesn't exist in the graph")
 
         elif start == end:
             return "no_route", []
@@ -615,7 +613,7 @@ class Router(Datastore):
                 _closeNode = False
                 nextNode = nextItem["mandatoryNodes"].pop(0)
                 if consideredNode in self.routing \
-                        and nextNode in self.routing.get(consideredNode, {}).keys():
+                        and nextNode in self.routing.get(consideredNode, {}):
 
                     _addToQueue(consideredNode, nextNode, nextItem,
                                 self.routing[consideredNode][nextNode])
