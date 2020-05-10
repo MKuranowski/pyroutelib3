@@ -461,21 +461,6 @@ class Datastore:
         print(f"Loaded {edges} {self.transport} edges")
 
 class Router(Datastore):
-    def __getattr__(self, name):
-        """BACKWARDS COMAPTIBILITY WHEN DATASTORE WAS AT Router.data"""
-        if name == ("data"):
-            warn("Router inherits from Datastore, call router.* instead of router.data.*",
-                 SyntaxWarning)
-            return self
-        return object.__getattribute__(self, name)
-
-    def __setattr__(self, name, value):
-        """BACKWARDS COMAPTIBILITY WHEN DATASTORE WAS AT Router.data"""
-        if name == ("data"):
-            warn("Router inherits from Datastore, call router.* instead of router.data.*",
-                 SyntaxWarning)
-            return self
-        return object.__setattr__(self, name, value)
 
     def doRoute(self, start, end):
         """Do the routing"""
