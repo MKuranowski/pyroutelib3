@@ -33,6 +33,7 @@
 #  2019-09-15  MK   Allow for custom storage classes, instead of default dict
 #  2020-02-14  MK   Use osmiter for data parsing to allow more file types
 #  2020-05-08  MK   Make use of hashing in turn restriction handling
+#  2020-05-11  MK   Decouple _AddToQueue from doRoute
 # ---------------------------------------------------------------------------
 import os
 import re
@@ -54,7 +55,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.6.0-a1"
+__version__ = "1.6.0-a2"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
@@ -462,155 +463,163 @@ class Datastore:
 
 class Router(Datastore):
 
+    def clearVariables(self):
+        self.queue = []
+        self.closed = set()
+        self.closeNode = None
+        self.searchTarget = None
+
+    def addItemToQueue(self, fromNode, toNode, lastItem, weight=1):
+        """Add another potential route to the queue"""
+        # Assume fromNode and toNode nodes have positions
+        if fromNode not in self.rnodes or toNode not in self.rnodes:
+            return
+
+        # Get data around toNode
+        self.getArea(self.rnodes[toNode][0], self.rnodes[toNode][1])
+
+        # Ignore if route is not traversible
+        if weight == 0:
+            return
+
+        # Do not turn around at a node (don't do this: a-b-a)
+        if len(lastItem["nodes"]) >= 2 and lastItem["nodes"][-2] == toNode:
+            return
+
+        edgeCost = self.distance(self.rnodes[fromNode], self.rnodes[toNode])
+        totalCost = lastItem["cost"] + edgeCost
+
+        heuristicCost = totalCost \
+            + self.distance(self.rnodes[toNode], self.rnodes[self.searchTarget])
+
+        allNodes = lastItem["nodes"] + [toNode]
+
+        # Check if path queueSoFar+end is not forbidden
+        if len(allNodes) >= 3:
+            forbidHash = tuple(allNodes[-3:])
+            possibleForbidden = self.forbiddenMoves.get(forbidHash, [])
+
+            for restriction in possibleForbidden:
+                # If allNodes is shorter then restriction, restriction can't apply
+                if len(restriction) > len(allNodes):
+                    continue
+
+                # Check if the end of allNodes is restricted
+                if allNodes[-len(restriction):] == restriction:
+                    self.closeNode = False
+                    return
+
+        # Check if we have a way to 'end' node
+        # FIXME: iterating over self.queue is bad for performance
+        #        maybe change to OrderedDict, so we do self.queue.get(toNode)?
+        endQueueItem = None
+        for i in self.queue:
+            if i["nodes"][-1] == toNode:
+                endQueueItem = i
+                break
+
+        # If we do, and known totalCost to end is lower we can ignore the queueSoFar path
+        if endQueueItem and endQueueItem["cost"] < totalCost:
+            return
+
+        # If the queued way to end has higher total cost, remove it
+        # and add the queueSoFar scenario, as it's cheaper.
+        elif endQueueItem:
+            self.queue.remove(endQueueItem)
+
+        # Check against mandatory turns
+        forceNextNodes = None
+        if lastItem.get("mandatoryNodes"):
+            forceNextNodes = lastItem["mandatoryNodes"]
+
+        else:
+            mandatoryActivator = allNodes[-2], allNodes[-1]
+            forceNextNodes = self.mandatoryMoves.get(mandatoryActivator)
+
+            if forceNextNodes:
+                self.closeNode = False
+
+                # Prevent mutating the list in self.mandatoryMoves
+                forceNextNodes = forceNextNodes.copy()
+
+        # Gather all info about queue item into a dict
+        nextItem = {
+            "cost": totalCost,
+            "heuristicCost": heuristicCost,
+            "nodes": allNodes,
+            "mandatoryNodes": forceNextNodes
+        }
+
+        # Try to insert, keeping the queue ordered by decreasing heuristic cost
+        for count, test in enumerate(self.queue):
+            if test["heuristicCost"] > nextItem["heuristicCost"]:
+                self.queue.insert(count, nextItem)
+                break
+        else:
+            self.queue.append(nextItem)
+
     def doRoute(self, start, end):
         """Do the routing"""
-        _closed = {start}
-        _queue = []
-        _closeNode = True
-        _end = end
-
-        # Define function that addes to the queue
-        def _addToQueue(start, end, queueSoFar, weight=1):
-            """Add another potential route to the queue"""
-            nonlocal _closed, _queue, _closeNode
-
-            # Assume start and end nodes have positions
-            if end not in self.rnodes or start not in self.rnodes:
-                return
-
-            # Get data around end node
-            self.getArea(self.rnodes[end][0], self.rnodes[end][1])
-
-            # Ignore if route is not traversible
-            if weight == 0:
-                return
-
-            # Do not turn around at a node (don't do this: a-b-a)
-            if len(queueSoFar["nodes"]) >= 2 and queueSoFar["nodes"][-2] == end:
-                return
-
-            edgeCost = self.distance(self.rnodes[start], self.rnodes[end]) / weight
-            totalCost = queueSoFar["cost"] + edgeCost
-            heuristicCost = totalCost + self.distance(self.rnodes[end], self.rnodes[_end])
-            allNodes = queueSoFar["nodes"] + [end]
-
-            # Check if path queueSoFar+end is not forbidden
-            if len(allNodes) >= 3:
-                forbidHash = tuple(allNodes[-3:])
-                possibleForbidden = self.forbiddenMoves.get(forbidHash, [])
-
-                for restriction in possibleForbidden:
-                    # If allNodes is shorter then restriction, restriction can't apply
-                    if len(restriction) > len(allNodes):
-                        continue
-
-                    # Check if the end of allNodes is restricted
-                    if allNodes[-len(restriction):] == restriction:
-                        _closeNode = False
-                        return
-
-            # Check if we have a way to 'end' node
-            endQueueItem = None
-            for i in _queue:
-                if i["end"] == end:
-                    endQueueItem = i
-                    break
-
-            # If we do, and known totalCost to end is lower we can ignore the queueSoFar path
-            if endQueueItem and endQueueItem["cost"] < totalCost:
-                return
-
-            # If the queued way to end has higher total cost, remove it
-            # and add the queueSoFar scenario, as it's cheaper.
-            elif endQueueItem:
-                _queue.remove(endQueueItem)
-
-            # Check against mandatory turns
-            forceNextNodes = None
-            if queueSoFar.get("mandatoryNodes", None):
-                forceNextNodes = queueSoFar["mandatoryNodes"]
-
-            else:
-                mandatoryActivator = allNodes[-2], allNodes[-1]
-                forceNextNodes = self.mandatoryMoves.get(mandatoryActivator)
-
-                if forceNextNodes:
-                    _closeNode = False
-
-                    # Prevent mutating the list in self.mandatoryMoves
-                    forceNextNodes = forceNextNodes.copy()
-
-            # Create a hash for all the route's attributes
-            queueItem = {
-                "cost": totalCost,
-                "heuristicCost": heuristicCost,
-                "nodes": allNodes,
-                "end": end,
-                "mandatoryNodes": forceNextNodes
-            }
-
-            # Try to insert, keeping the queue ordered by decreasing heuristic cost
-            count = 0
-            for test in _queue:
-                if test["heuristicCost"] > queueItem["heuristicCost"]:
-                    _queue.insert(count, queueItem)
-                    break
-                count += 1
-
-            else:
-                _queue.append(queueItem)
+        self.clearVariables()
+        self.searchTarget = end
 
         # Start by queueing all outbound links from the start node
         if start not in self.routing:
             raise KeyError(f"node {start} doesn't exist in the graph")
 
         elif start == end:
+            self.clearVariables()
             return "no_route", []
 
         else:
             for linkedNode, weight in self.routing[start].items():
-                _addToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, weight)
+                self.addItemToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, weight)
 
         # Limit for how long it will search
         count = 0
         while count < 1000000:
             count += 1
-            _closeNode = True
+            self.closeNode = True
 
             # Pop first item from queue for routing. If queue it's empty - it means no route exists
-            if len(_queue) > 0:
-                nextItem = _queue.pop(0)
+            if len(self.queue) > 0:
+                currentItem = self.queue.pop(0)
             else:
+                self.clearVariables()
                 return "no_route", []
 
-            consideredNode = nextItem["end"]
+            consideredNode = currentItem["nodes"][-1]
 
             # If we already visited the node, ignore it
-            if consideredNode in _closed:
+            if consideredNode in self.closed:
                 continue
 
             # Found the end node - success
             if consideredNode == end:
-                return "success", nextItem["nodes"]
+                self.clearVariables()
+                return "success", currentItem["nodes"]
 
             # Check if we preform a mandatory turn
-            if nextItem["mandatoryNodes"]:
-                _closeNode = False
-                nextNode = nextItem["mandatoryNodes"].pop(0)
+            if currentItem["mandatoryNodes"]:
+                self.closeNode = False
+
+                nextNode = currentItem["mandatoryNodes"].pop(0)
                 if consideredNode in self.routing \
                         and nextNode in self.routing.get(consideredNode, {}):
 
-                    _addToQueue(consideredNode, nextNode, nextItem,
-                                self.routing[consideredNode][nextNode])
+                    self.addItemToQueue(consideredNode, nextNode, currentItem,
+                                        self.routing[consideredNode][nextNode])
 
             # If no, add all possible nodes from x to queue
             elif consideredNode in self.routing:
                 for nextNode, weight in self.routing[consideredNode].items():
-                    if nextNode not in _closed:
-                        _addToQueue(consideredNode, nextNode, nextItem, weight)
 
-            if _closeNode:
-                _closed.add(consideredNode)
+                    if nextNode not in self.closed:
+                        self.addItemToQueue(consideredNode, nextNode, currentItem, weight)
+
+            if self.closeNode:
+                self.closed.add(consideredNode)
 
         else:
+            self.clearVariables()
             return "gave_up", []
