@@ -55,7 +55,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.6.0-a2"
+__version__ = "1.6.0"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
