@@ -55,7 +55,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
@@ -135,7 +135,7 @@ def _flatternAndRemoveDupes(x):
 class Datastore:
     """Object for storing routing data"""
     def __init__(self, transport, localfile=False, localfileType="xml",
-                 expire_data=30, storage_class=dict):
+                 expire_data=30, storage_class=dict, ignoreDataErrs=True):
         """Initialise an OSM-file parser"""
         # Routing data
         self.routing = storage_class()
@@ -147,6 +147,7 @@ class Datastore:
         self.tiles = storage_class()
         self.expire_data = 86400 * expire_data  # expire_data is in days, we need seconds
         self.localFile = bool(localfile)
+        self.ignoreDataErrs = ignoreDataErrs
 
         # verify localFileType
         if localfileType not in {"xml", "gz", "bz2", "pbf"}:
@@ -325,8 +326,11 @@ class Datastore:
 
                 self.storeRestriction(relId, restrictionType, nodes)
 
-            except (KeyError, AssertionError, IndexError):
-                continue
+            except (KeyError, AssertionError, IndexError, ValueError):
+                if self.ignoreDataErrs:
+                    continue
+                else:
+                    raise
 
     def storeRestriction(self, relId, restrictionType, members):
         # Order members of restriction
