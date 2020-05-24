@@ -35,17 +35,12 @@
 #  2020-05-08  MK   Make use of hashing in turn restriction handling
 #  2020-05-11  MK   Decouple _AddToQueue from doRoute
 # ---------------------------------------------------------------------------
-import os
-import re
-import sys
+from urllib.request import urlretrieve
+from collections import OrderedDict
+import osmiter
 import math
 import time
-import osmiter
-import xml.etree.ElementTree as etree
-from warnings import warn
-from datetime import datetime
-from collections import OrderedDict
-from urllib.request import urlretrieve
+import os
 
 __title__ = "pyroutelib3"
 __description__ = "Library for simple routing on OSM data"
@@ -55,7 +50,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.6.1"
+__version__ = "1.6.2-a1"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
