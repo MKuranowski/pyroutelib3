@@ -32,8 +32,9 @@ def test_live():
 
     # Count up the number of tiles
     count = 0
-    for (dirpath, dirnames, fnames) in os.walk("tilescache"):
+    for (_, _, fnames) in os.walk("tilescache"):
         for f in fnames:
-            if f == "data.osm": count += 1
+            if f == "data.osm":
+                count += 1
 
     assert count < 30
