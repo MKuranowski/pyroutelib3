@@ -188,15 +188,17 @@ class Datastore:
     @staticmethod
     def distance(n1, n2):
         """Calculate distance in km between two nodes using haversine forumla"""
-        lat1, lon1 = n1[0], n1[1]
-        lat2, lon2 = n2[0], n2[1]
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        h = math.sin(math.radians(dlat) * 0.5) ** 2 \
-            + (math.cos(math.radians(lat1))
-               * math.cos(math.radians(lat2))
-               * math.sin(math.radians(dlon) * 0.5) ** 2)
-        return math.asin(math.sqrt(h)) * 12742
+        lat1, lon1 = map(math.radians, n1)
+        lat2, lon2 = map(math.radians, n2)
+        dlathalf = (lat2 - lat1) * 0.5
+        dlonhalf = (lon2 - lon1) * 0.5
+
+        sqrth = math.sqrt(
+            (math.sin(dlathalf) ** 2)
+            + (math.cos(lat1) * math.cos(lat2) * (math.sin(dlonhalf) ** 2))
+        )
+
+        return math.asin(sqrth) * 12742
 
     def nodeLatLon(self, node):
         """Get node's lat lon"""
