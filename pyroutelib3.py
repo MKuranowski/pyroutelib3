@@ -168,6 +168,9 @@ class Datastore:
             self.transport = transport if transport != "cycle" else "bicycle"
             self.type = TYPES[transport].copy()
 
+        # Save the maximum weight
+        self._maxWeight = max(self.type["weights"].values())
+
         # Load local file if it was passed
         if self.localFile:
             self.loadOsm(localfile, localfileType)
@@ -402,15 +405,19 @@ class Datastore:
 
         # Store routing information
         for index in range(1, len(nodes)):
-            node1Id, node1Lat, node1Lon = nodes[index - 1]
-            node2Id, node2Lat, node2Lon = nodes[index]
+            node1Id, node1Pos = nodes[index - 1][0], nodes[index - 1][1:]
+            node2Id, node2Pos = nodes[index][0], nodes[index][1:]
 
             # Check if nodes' positions are stored
             if node1Id not in self.rnodes:
-                self.rnodes[node1Id] = (node1Lat, node1Lon)
+                self.rnodes[node1Id] = node1Pos
 
             if node2Id not in self.rnodes:
-                self.rnodes[node2Id] = (node2Lat, node2Lon)
+                self.rnodes[node2Id] = node2Pos
+
+            # Calculate the cost of this edge
+            dist = self.distance(node1Pos, node2Pos)
+            cost = dist * self._maxWeight / weight
 
             # Check if nodes have dicts for storing travel costs
             if node1Id not in self.routing:
@@ -420,12 +427,12 @@ class Datastore:
                 self.routing[node2Id] = {}
 
             # Is way traversible forward?
-            if oneway not in ["-1", "reverse"]:
-                self.routing[node1Id][node2Id] = weight
+            if oneway not in {"-1", "reverse"}:
+                self.routing[node1Id][node2Id] = cost
 
             # Is way traversible backword?
-            if oneway not in ["yes", "true", "1"]:
-                self.routing[node2Id][node1Id] = weight
+            if oneway not in {"yes", "true", "1"}:
+                self.routing[node2Id][node1Id] = cost
 
     @staticmethod
     def equivalent(tag):
@@ -472,7 +479,7 @@ class Router(Datastore):
         self.closeNode = None
         self.searchTarget = None
 
-    def addItemToQueue(self, fromNode, toNode, lastItem, weight=1):
+    def addItemToQueue(self, fromNode, toNode, lastItem, cost):
         """Add another potential route to the queue"""
         # Assume fromNode and toNode nodes have positions
         if fromNode not in self.rnodes or toNode not in self.rnodes:
@@ -482,15 +489,14 @@ class Router(Datastore):
         self.getArea(self.rnodes[toNode][0], self.rnodes[toNode][1])
 
         # Ignore if route is not traversible
-        if weight == 0:
+        if cost == 0:
             return
 
         # Do not turn around at a node (don't do this: a-b-a)
         if len(lastItem["nodes"]) >= 2 and lastItem["nodes"][-2] == toNode:
             return
 
-        edgeCost = self.distance(self.rnodes[fromNode], self.rnodes[toNode])
-        totalCost = lastItem["cost"] + edgeCost
+        totalCost = lastItem["cost"] + cost
 
         heuristicCost = totalCost \
             + self.distance(self.rnodes[toNode], self.rnodes[self.searchTarget])
@@ -575,8 +581,8 @@ class Router(Datastore):
             return "no_route", []
 
         else:
-            for linkedNode, weight in self.routing[start].items():
-                self.addItemToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, weight)
+            for linkedNode, cost in self.routing[start].items():
+                self.addItemToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, cost)
 
         # Limit for how long it will search
         count = 0
@@ -615,10 +621,10 @@ class Router(Datastore):
 
             # If no, add all possible nodes from x to queue
             elif consideredNode in self.routing:
-                for nextNode, weight in self.routing[consideredNode].items():
+                for nextNode, cost in self.routing[consideredNode].items():
 
                     if nextNode not in self.closed:
-                        self.addItemToQueue(consideredNode, nextNode, currentItem, weight)
+                        self.addItemToQueue(consideredNode, nextNode, currentItem, cost)
 
             if self.closeNode:
                 self.closed.add(consideredNode)
