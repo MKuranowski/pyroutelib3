@@ -50,7 +50,7 @@ __copyright__ = "Copyright 2007, Oliver White; " \
                 "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
-__version__ = "1.6.2-a1"
+__version__ = "1.6.2-a3"
 __maintainer__ = "Mikolaj Kuranowski"
 __email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
                                      103, 109, 97, 105, 108, 46, 99, 111, 109])
@@ -417,7 +417,7 @@ class Datastore:
 
             # Calculate the cost of this edge
             dist = self.distance(node1Pos, node2Pos)
-            cost = dist * self._maxWeight / weight
+            cost = dist / weight
 
             # Check if nodes have dicts for storing travel costs
             if node1Id not in self.routing:
@@ -475,160 +475,133 @@ class Router(Datastore):
 
     def clearVariables(self):
         self.queue = []
-        self.closed = set()
-        self.closeNode = None
-        self.searchTarget = None
+        self.costTo = {}
+        self.endPos = None
 
-    def addItemToQueue(self, fromNode, toNode, lastItem, cost):
-        """Add another potential route to the queue"""
-        # Assume fromNode and toNode nodes have positions
-        if fromNode not in self.rnodes or toNode not in self.rnodes:
-            return
-
-        # Get data around toNode
-        self.getArea(self.rnodes[toNode][0], self.rnodes[toNode][1])
-
-        # Ignore if route is not traversible
+    def addToQueue(self, fromNode, toNode, cost, prevItem):
+        # Check if route is traversible
         if cost == 0:
             return
 
-        # Do not turn around at a node (don't do this: a-b-a)
-        if len(lastItem["nodes"]) >= 2 and lastItem["nodes"][-2] == toNode:
+        # Don't turn around at a node (no a-b-a)
+        if len(prevItem["route"]) >= 2 and prevItem["route"][-2] == toNode:
             return
 
-        totalCost = lastItem["cost"] + cost
+        # Check if we comply with mandatory moves
+        if "forceNext" in prevItem and prevItem["forceNext"][0] != toNode:
+            return
 
-        heuristicCost = totalCost \
-            + self.distance(self.rnodes[toNode], self.rnodes[self.searchTarget])
+        # Ger fromNode and toNode position
+        fromPos = self.rnodes.get(fromNode)
+        toPos = self.rnodes.get(toNode)
 
-        allNodes = lastItem["nodes"] + [toNode]
+        # Assume both fromNode and toNode exist
+        if fromPos is None or toPos is None:
+            return
 
-        # Check if path queueSoFar+end is not forbidden
-        if len(allNodes) >= 3:
-            forbidHash = tuple(allNodes[-3:])
-            possibleForbidden = self.forbiddenMoves.get(forbidHash, [])
+        # Get data around toNode
+        self.getArea(*toPos)
 
-            for restriction in possibleForbidden:
-                # If allNodes is shorter then restriction, restriction can't apply
-                if len(restriction) > len(allNodes):
+        # Gather some data on the added queue item
+        route = prevItem["route"] + [toNode]
+        totalCost = prevItem["totalCost"] + cost
+        heuristicCost = totalCost + self.distance(toPos, self.endPos)
+
+        # Check if we have a cheaper way of getting to toNode
+        if self.costTo.get(toNode, math.inf) < totalCost:
+            return
+
+        # Check if we don't run into a restriction
+        if len(route) >= 3:
+            forbidHash = tuple(route[-3:])
+
+            for restriction in self.forbiddenMoves.get(forbidHash, []):
+                # If route is shorter then restriction, move to next check
+                if len(restriction) > len(route):
                     continue
 
-                # Check if the end of allNodes is restricted
-                if allNodes[-len(restriction):] == restriction:
-                    self.closeNode = False
+                # If route ends with restriction → don't add this edge
+                if route[-len(restriction):] == restriction:
                     return
 
-        # Check if we have a way to 'end' node
-        # FIXME: iterating over self.queue is bad for performance
-        #        maybe change to OrderedDict, so we do self.queue.get(toNode)?
-        endQueueItem = None
-        for i in self.queue:
-            if i["nodes"][-1] == toNode:
-                endQueueItem = i
-                break
-
-        # If we do, and known totalCost to end is lower we can ignore the queueSoFar path
-        if endQueueItem and endQueueItem["cost"] < totalCost:
-            return
-
-        # If the queued way to end has higher total cost, remove it
-        # and add the queueSoFar scenario, as it's cheaper.
-        elif endQueueItem:
-            self.queue.remove(endQueueItem)
-
-        # Check against mandatory turns
-        forceNextNodes = None
-        if lastItem.get("mandatoryNodes"):
-            forceNextNodes = lastItem["mandatoryNodes"]
+        # Check for mandatory moves
+        if "forceNext" in prevItem and len(prevItem["forceNext"]) > 1:
+            forceNext = prevItem["forceNext"][1:]
 
         else:
-            mandatoryActivator = allNodes[-2], allNodes[-1]
-            forceNextNodes = self.mandatoryMoves.get(mandatoryActivator)
+            mandatoryActivator = tuple(route[-2:])
+            forceNext = self.mandatoryMoves.get(mandatoryActivator)
 
-            if forceNextNodes:
-                self.closeNode = False
-
-                # Prevent mutating the list in self.mandatoryMoves
-                forceNextNodes = forceNextNodes.copy()
-
-        # Gather all info about queue item into a dict
+        # Gather all important data into a dict
         nextItem = {
-            "cost": totalCost,
+            "id": toNode,
+            "route": route,
+            "totalCost": totalCost,
             "heuristicCost": heuristicCost,
-            "nodes": allNodes,
-            "mandatoryNodes": forceNextNodes
         }
 
-        # Try to insert, keeping the queue ordered by decreasing heuristic cost
+        if forceNext is not None:
+            nextItem["forceNext"] = forceNext
+
+        # Set the cost to toNode
+        self.costTo[toNode] = totalCost
+
+        # Insert nextItem while keeping the queue ordered by decreasing heuristic cost
         for count, test in enumerate(self.queue):
-            if test["heuristicCost"] > nextItem["heuristicCost"]:
+            if test["heuristicCost"] > heuristicCost:
                 self.queue.insert(count, nextItem)
                 break
         else:
             self.queue.append(nextItem)
 
     def doRoute(self, start, end):
-        """Do the routing"""
         self.clearVariables()
-        self.searchTarget = end
 
-        # Start by queueing all outbound links from the start node
-        if start not in self.routing:
-            raise KeyError(f"node {start} doesn't exist in the graph")
+        # Assume start and end exist
+        if start not in self.routing or start not in self.rnodes:
+            raise KeyError(f"start node {start} doesn't exist in the graph")
+
+        elif end not in self.rnodes:
+            raise KeyError(f"end node {start} doesn't exist in the graph")
 
         elif start == end:
-            self.clearVariables()
             return "no_route", []
 
-        else:
-            for linkedNode, cost in self.routing[start].items():
-                self.addItemToQueue(start, linkedNode, {"cost": 0, "nodes": [start]}, cost)
+        # Save the end position
+        self.endPos = self.rnodes[end]
 
-        # Limit for how long it will search
+        # Add the start node
+        self.costTo[start] = 0
+        self.queue.append({
+            "id": start,
+            "route": [start],
+            "totalCost": 0,
+            "heuristicCost": self.distance(self.rnodes[start], self.endPos)
+        })
+
+        # Limit search time
         count = 0
-        while count < 1000000:
+        while count < 1_000_000:
             count += 1
-            self.closeNode = True
 
-            # Pop first item from queue for routing. If queue it's empty - it means no route exists
-            if len(self.queue) > 0:
-                currentItem = self.queue.pop(0)
-            else:
+            # Get an item from the queue
+            try:
+                considered = self.queue.pop(0)
+            except IndexError:
                 self.clearVariables()
                 return "no_route", []
 
-            consideredNode = currentItem["nodes"][-1]
 
-            # If we already visited the node, ignore it
-            if consideredNode in self.closed:
-                continue
-
-            # Found the end node - success
-            if consideredNode == end:
+            # Check if we arrived at the end
+            if considered["id"] == end:
+                # DEBUG
+                print("checked nodes:", count)
                 self.clearVariables()
-                return "success", currentItem["nodes"]
+                return "success", considered["route"]
 
-            # Check if we preform a mandatory turn
-            if currentItem["mandatoryNodes"]:
-                self.closeNode = False
+            # Add all edges originating from considered queue item
+            for neighbor, cost in self.routing.get(considered["id"], {}).items():
+                self.addToQueue(considered["id"], neighbor, cost, considered)
 
-                nextNode = currentItem["mandatoryNodes"].pop(0)
-                if consideredNode in self.routing \
-                        and nextNode in self.routing.get(consideredNode, {}):
-
-                    self.addItemToQueue(consideredNode, nextNode, currentItem,
-                                        self.routing[consideredNode][nextNode])
-
-            # If no, add all possible nodes from x to queue
-            elif consideredNode in self.routing:
-                for nextNode, cost in self.routing[consideredNode].items():
-
-                    if nextNode not in self.closed:
-                        self.addItemToQueue(consideredNode, nextNode, currentItem, cost)
-
-            if self.closeNode:
-                self.closed.add(consideredNode)
-
-        else:
-            self.clearVariables()
-            return "gave_up", []
+        self.clearVariables()
+        return "gave_up", []
