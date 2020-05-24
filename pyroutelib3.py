@@ -60,7 +60,8 @@ TYPES = {
     "car": {
         "weights": {
             "motorway": 10, "trunk": 10, "primary": 2, "secondary": 1.5, "tertiary": 1,
-            "unclassified": 1, "residential": 0.7, "track": 0.5, "service": 0.5,
+            "unclassified": 1, "residential": 0.7, "living_street": 0.5, "track": 0.5,
+            "service": 0.5,
         },
         "access": ["access", "vehicle", "motor_vehicle", "motorcar"]},
     "bus": {
@@ -72,20 +73,21 @@ TYPES = {
     "cycle": {
         "weights": {
             "trunk": 0.05, "primary": 0.3, "secondary": 0.9, "tertiary": 1,
-            "unclassified": 1, "cycleway": 2, "residential": 2.5, "track": 1,
-            "service": 1, "bridleway": 0.8, "footway": 0.8, "steps": 0.5, "path": 1,
+            "unclassified": 1, "cycleway": 2, "residential": 2.5, "living_street": 1,
+            "track": 1, "service": 1, "bridleway": 0.8, "footway": 0.8, "steps": 0.5, "path": 1,
         },
         "access": ["access", "vehicle", "bicycle"]},
     "horse": {
         "weights": {
             "primary": 0.05, "secondary": 0.15, "tertiary": 0.3, "unclassified": 1,
-            "residential": 1, "track": 1.5, "service": 1, "bridleway": 5, "path": 1.5,
+            "residential": 1, "living_street": 1, "track": 1.5, "service": 1,
+            "bridleway": 5, "path": 1.5,
         },
         "access": ["access", "horse"]},
     "foot": {
         "weights": {
             "trunk": 0.3, "primary": 0.6, "secondary": 0.95, "tertiary": 1,
-            "unclassified": 1, "residential": 1, "track": 1, "service": 1,
+            "unclassified": 1, "residential": 1, "living_street": 1, "track": 1, "service": 1,
             "bridleway": 1, "footway": 1.2, "path": 1.2, "steps": 1.15,
         },
         "access": ["access", "foot"]},
