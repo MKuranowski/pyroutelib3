@@ -1,0 +1,143 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='JOSM'>
+  <node id='-1' lat='-2.73495245962' lon='2.83923666828'>
+    <tag k='ref' v='-1' />
+  </node>
+  <node id='-2' lat='-2.73242793496' lon='2.83923765326'>
+    <tag k='ref' v='-2' />
+  </node>
+  <node id='-61' lat='-2.72972768022' lon='2.83926371472'>
+    <tag k='ref' v='-61' />
+  </node>
+  <node id='-62' lat='-2.72938616409' lon='2.83956383049'>
+    <tag k='ref' v='-62' />
+  </node>
+  <node id='-63' lat='-2.72907392744' lon='2.83920771391'>
+    <tag k='ref' v='-63' />
+  </node>
+  <node id='-60' lat='-2.72941544366' lon='2.83890759814'>
+    <tag k='ref' v='-60' />
+  </node>
+  <node id='-3' lat='-2.73243462926' lon='2.84135576989'>
+    <tag k='ref' v='-3' />
+  </node>
+  <node id='-7' lat='-2.72941089232' lon='2.84139901524'>
+    <tag k='ref' v='-7' />
+  </node>
+  <node id='-8' lat='-2.72825076265' lon='2.84257281775'>
+    <tag k='ref' v='-8' />
+  </node>
+  <node id='-4' lat='-2.73083636925' lon='2.84072562328'>
+    <tag k='ref' v='-4' />
+  </node>
+  <node id='-9' lat='-2.72638097685' lon='2.83923674747'>
+    <tag k='ref' v='-9' />
+  </node>
+  <node id='-5' lat='-2.73091659085' lon='2.84209711884'>
+    <tag k='ref' v='-5' />
+  </node>
+  <way id='-100'>
+    <nd ref='-1' />
+    <nd ref='-2' />
+    <tag k='highway' v='primary' />
+    <tag k='ref' v='-100' />
+  </way>
+  <way id='-107'>
+    <nd ref='-2' />
+    <nd ref='-61' />
+    <tag k='highway' v='primary' />
+    <tag k='motor_vehicle' v='no' />
+    <tag k='ref' v='-107' />
+  </way>
+  <way id='-108'>
+    <nd ref='-63' />
+    <nd ref='-60' />
+    <nd ref='-61' />
+    <nd ref='-62' />
+    <nd ref='-63' />
+    <tag k='highway' v='primary' />
+    <tag k='junction' v='roundabout' />
+    <tag k='ref' v='-108' />
+  </way>
+  <way id='-101'>
+    <nd ref='-2' />
+    <nd ref='-3' />
+    <tag k='highway' v='unclassified' />
+    <tag k='ref' v='-101' />
+  </way>
+  <way id='-102'>
+    <nd ref='-3' />
+    <nd ref='-7' />
+    <tag k='highway' v='unclassified' />
+    <tag k='ref' v='-102' />
+  </way>
+  <way id='-109'>
+    <nd ref='-7' />
+    <nd ref='-62' />
+    <tag k='highway' v='unclassified' />
+    <tag k='ref' v='-109' />
+  </way>
+  <way id='-110'>
+    <nd ref='-8' />
+    <nd ref='-7' />
+    <tag k='highway' v='unclassified' />
+    <tag k='ref' v='-110' />
+  </way>
+  <way id='-105'>
+    <nd ref='-7' />
+    <nd ref='-4' />
+    <tag k='highway' v='unclassified' />
+    <tag k='oneway' v='yes' />
+    <tag k='ref' v='-105' />
+  </way>
+  <way id='-103'>
+    <nd ref='-4' />
+    <nd ref='-3' />
+    <tag k='highway' v='motorway' />
+    <tag k='ref' v='-103' />
+  </way>
+  <way id='-111'>
+    <nd ref='-63' />
+    <nd ref='-9' />
+    <tag k='highway' v='primary' />
+    <tag k='ref' v='-111' />
+  </way>
+  <way id='-104'>
+    <nd ref='-3' />
+    <nd ref='-5' />
+    <tag k='highway' v='motorway' />
+    <tag k='ref' v='-104' />
+  </way>
+  <way id='-106'>
+    <nd ref='-7' />
+    <nd ref='-5' />
+    <tag k='highway' v='unclassified' />
+    <tag k='oneway' v='-1' />
+    <tag k='ref' v='-106' />
+  </way>
+  <relation id='-200'>
+    <member type='way' ref='-110' role='from' />
+    <member type='node' ref='-7' role='via' />
+    <member type='way' ref='-102' role='to' />
+    <tag k='ref' v='-200' />
+    <tag k='restriction' v='no_left_turn' />
+    <tag k='type' v='restriction' />
+  </relation>
+  <relation id='-201'>
+    <member type='way' ref='-100' role='from' />
+    <member type='node' ref='-2' role='via' />
+    <member type='way' ref='-101' role='to' />
+    <tag k='ref' v='-201' />
+    <tag k='restriction' v='only_right_turn' />
+    <tag k='type' v='restriction' />
+  </relation>
+  <relation id='-202'>
+    <member type='way' ref='-102' role='from' />
+    <member type='node' ref='-3' role='via' />
+    <member type='way' ref='-104' role='to' />
+    <tag k='except' v='motorcar' />
+    <tag k='ref' v='-202' />
+    <tag k='restriction' v='no_left_turn' />
+    <tag k='type' v='restriction' />
+  </relation>
+</osm>

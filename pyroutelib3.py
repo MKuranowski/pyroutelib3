@@ -203,7 +203,7 @@ class Datastore:
             + (math.cos(lat1) * math.cos(lat2) * (math.sin(dlonhalf) ** 2))
         )
 
-        return math.asin(sqrth) * 12742
+        return math.asin(sqrth) * 2 * 6371
 
     def nodeLatLon(self, node):
         """Get node's lat lon"""
