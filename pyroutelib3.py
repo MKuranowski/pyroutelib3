@@ -593,8 +593,6 @@ class Router(Datastore):
 
             # Check if we arrived at the end
             if considered["id"] == end:
-                # DEBUG
-                print("checked nodes:", count)
                 self.clearVariables()
                 return "success", considered["route"]
 
