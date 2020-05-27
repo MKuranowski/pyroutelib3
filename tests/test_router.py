@@ -38,6 +38,14 @@ def test_basic():
     assert s == "success"
     assert n == [1, 2, 5, 4]
 
+def test_no_prints(capsys):
+    r = pyroutelib3.Router("car", "tests/simple_graph.osm")
+    r.doRoute(-1, -8)
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
 def test_mandatory():
     r = prepare_router()
     r.mandatoryMoves[(1, 2)] = [3]
