@@ -9,7 +9,7 @@ def test_live():
     # Do some routing - a car test
     r = pyroutelib3.Router("car")
     a, b = r.findNode(52.240712, 21.025801), r.findNode(52.2462868, 21.0123011)
-    s, t = r.doRoute(a, b)
+    s, _ = r.doRoute(a, b)
 
     assert s == "success"
     assert len(r.routing) < 15_000
@@ -17,7 +17,7 @@ def test_live():
     # Do some routing - a bus test
     r = pyroutelib3.Router("bus")
     a, b = r.findNode(52.240712, 21.025801), r.findNode(52.2462868, 21.0123011)
-    s, t = r.doRoute(a, b)
+    s, _ = r.doRoute(a, b)
 
     assert s == "success"
     assert len(r.routing) < 7500
@@ -25,7 +25,7 @@ def test_live():
     # Do some routing - a tram test
     r = pyroutelib3.Router("tram")
     a, b = r.findNode(52.244585, 21.084751), r.findNode(52.225889, 20.996075)
-    s, t = r.doRoute(a, b)
+    s, _ = r.doRoute(a, b)
 
     assert s == "success"
     assert len(r.routing) < 1500
