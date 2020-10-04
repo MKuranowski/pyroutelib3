@@ -99,6 +99,7 @@ TYPES = {
         "access": ["access"]}
 }
 
+
 def _whichTile(lat, lon, zoom):
     """Determine in which tile the given lat, lon lays"""
     n = 2 ** zoom
@@ -107,8 +108,10 @@ def _whichTile(lat, lon, zoom):
                            + (1 / math.cos(math.radians(lat)))) / math.pi) / 2)
     return int(x), int(y)
 
+
 def _marcToLat(x):
     return math.degrees(math.atan(math.sinh(x)))
+
 
 def _tileBoundary(x, y, z):
     """Return (left, bottom, right, top) of bbox of given tile"""
@@ -119,6 +122,7 @@ def _tileBoundary(x, y, z):
     right = left + (360 / n)
     return left, bottom, right, top
 
+
 def _flatternAndRemoveDupes(x):
     result = []
     prev = None
@@ -128,6 +132,7 @@ def _flatternAndRemoveDupes(x):
                 prev = item
                 result.append(item)
     return result
+
 
 class Datastore:
     """Object for storing routing data"""
@@ -470,6 +475,7 @@ class Datastore:
         edges = sum(len(i) for i in self.routing.values())
         print(f"Loaded {len(self.rnodes)} nodes")
         print(f"Loaded {edges} {self.transport} edges")
+
 
 class Router(Datastore):
 
