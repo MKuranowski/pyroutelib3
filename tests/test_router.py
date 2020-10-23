@@ -1,7 +1,7 @@
+from pyroutelib3.util import distEuclidian
 import pyroutelib3
-import math
 
-# Graph, which is checked:
+# Checked Graph:
 #
 #   (2)   (2)   (2)
 # 1─────2─────3─────4
@@ -11,10 +11,10 @@ import math
 # For test_mandatory, 1-2-3 is a mandatory move
 # For test_forbidden, 1-2-5 is a forbidde move
 
+
 def prepare_router():
-    r = pyroutelib3.Router("car")
+    r = pyroutelib3.Router("car", distFunction=distEuclidian)
     r.localFile = True
-    r.distance = math.dist
 
     r.rnodes[1] = (1, 1)
     r.rnodes[2] = (2, 1)
@@ -30,6 +30,7 @@ def prepare_router():
 
     return r
 
+
 def test_basic():
     r = prepare_router()
 
@@ -38,6 +39,7 @@ def test_basic():
     assert s == "success"
     assert n == [1, 2, 5, 4]
 
+
 def test_no_prints(capsys):
     r = pyroutelib3.Router("car", "tests/simple_graph.osm")
     r.doRoute(-1, -8)
@@ -45,6 +47,7 @@ def test_no_prints(capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
+
 
 def test_mandatory():
     r = prepare_router()
@@ -55,6 +58,7 @@ def test_mandatory():
     assert s == "success"
     assert n == [1, 2, 3, 4]
 
+
 def test_forbidden():
     r = prepare_router()
     r.forbiddenMoves[(1, 2, 5)] = [[1, 2, 5]]
@@ -63,6 +67,7 @@ def test_forbidden():
 
     assert s == "success"
     assert n == [1, 2, 3, 4]
+
 
 # Test shortest-is-not-best
 #
@@ -79,9 +84,8 @@ def test_forbidden():
 #
 
 def test_shortest_not_optimal():
-    r = pyroutelib3.Router("car")
+    r = pyroutelib3.Router("car", distFunction=pyroutelib3.distEuclidian)
     r.localFile = True
-    r.distance = math.dist
 
     # Nodes
     r.rnodes[1] = (0, 0)
@@ -101,7 +105,7 @@ def test_shortest_not_optimal():
     r.routing[4] = {1: 6, 5: 2, 7: 4}
     r.routing[5] = {2: 5, 4: 2, 6: 4, 8: 3}
     r.routing[6] = {3: 1, 5: 4, 9: 1}
-    r.routing[7] = {4: 4, 8: 5,}
+    r.routing[7] = {4: 4, 8: 5}
     r.routing[8] = {5: 3, 7: 5, 9: 1}
     r.routing[9] = {6: 1, 8: 1}
 

@@ -2,9 +2,11 @@ import pyroutelib3
 import shutil
 import os
 
+
 def test_live():
     # Clear tilescache
-    shutil.rmtree("tilescache")
+    if os.path.isdir("tilescache"):
+        shutil.rmtree("tilescache")
 
     # Do some routing - a car test
     r = pyroutelib3.Router("car")
