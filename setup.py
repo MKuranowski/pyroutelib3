@@ -17,5 +17,6 @@ setup(
     url="https://github.com/MKuranowski/pyroutelib3",
     keywords="osm routing pyroutelib",
     classifiers=[],
-    install_requires=["osmiter"],
+    python_requires=">=3.6, <4",
+    install_requires=["osmiter>=1.1", "typing_extensions"],
 )
