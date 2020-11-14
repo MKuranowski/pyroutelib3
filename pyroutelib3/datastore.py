@@ -28,13 +28,13 @@
 
 from urllib.request import urlretrieve
 from osmiter import iter_from_osm
-from typing import Any, BinaryIO, Dict, List, Set, Tuple, Union, Optional
+from typing import Any, BinaryIO, Dict, List, Mapping, Set, Tuple, Union, Optional
 import time
 import os
 
 from .osmparsing import getWayAllowed, getWayOneway, getWayWeight, \
     getRelationNodes, getFlatRelNodes, getOsmTile, getTileBoundary
-from .types import TYPES, TypeDescription
+from .types import TYPES, TypeDescription, validate_type
 from .util import TILES_ZOOM, Position, DistFunction, distHaversine
 from .err import InvalidNode, OsmInvalidRestriction, OsmReferenceError, OsmStructureError
 
@@ -61,7 +61,7 @@ class Datastore:
 
     def __init__(
             self,
-            transport: Union[str, TypeDescription],
+            transport: Union[str, TypeDescription, Mapping[str, Any]],
             localfile: Union[None, str, bytes, int, BinaryIO] = None,
             localfileType: str = "xml",
             expireData: int = 30,
@@ -80,7 +80,7 @@ class Datastore:
             self.type = TYPES[transport].copy()
         else:
             self.transport = transport["name"]
-            self.type = transport
+            self.type = validate_type(transport)
 
         # Info about live OSM downloading
         self.localFile = localfile is not None
@@ -328,7 +328,7 @@ class Datastore:
         bestDist = float("inf")
 
         if len(self.rnodes) <= 0:
-            raise KeyError(f"findNode in an empty space")
+            raise KeyError("findNode in an empty space")
 
         for nodeId, nodePos in self.rnodes.items():
             nodeDist = self.distance((lat, lon), nodePos)

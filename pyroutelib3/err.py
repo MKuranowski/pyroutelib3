@@ -50,3 +50,7 @@ class OsmStructureError(BaseOsmError, ValueError):
 class InvalidNode(BaseOsmError, KeyError):
     """User-provided node is not known."""
     pass
+
+
+class InvalidTypeDescription(BaseOsmError, TypeError):
+    """User-provided routing type is not valid."""

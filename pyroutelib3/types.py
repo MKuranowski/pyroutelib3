@@ -26,14 +26,50 @@
 
 """Contains default routing types (aka profiles)"""
 
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
 from typing_extensions import TypedDict
+import collections.abc
+
+from .err import InvalidTypeDescription
 
 
 class TypeDescription(TypedDict):
     name: str
     weights: Mapping[str, float]
     access: Sequence[str]
+
+
+def validate_type(in_type: Mapping[str, Any]) -> TypeDescription:
+    """Validates if incoming 'type' dictionary conforms to TypeDescription"""
+    # Check if all keys are there
+    missing_keys = {"name", "weights", "access"}.difference(in_type.keys())
+    if missing_keys:
+        missing_keys = ", ".join(repr(i) for i in sorted(missing_keys))
+        raise InvalidTypeDescription("Provided type description is missing some keys: "
+                                     + missing_keys)
+
+    # Check in_type['name']
+    if not isinstance(in_type["name"], str):
+        got_type = type(in_type["name"]).__name__
+        raise InvalidTypeDescription(f"Value of type['name'] should be str, not {got_type}")
+
+    # Check in_type['weights']
+    if not isinstance(in_type["weights"], collections.abc.Mapping):
+        got_type = type(in_type["weights"]).__name__
+        raise InvalidTypeDescription(
+            "Value of type['weights'] should be an instance of collections.abc.Mapping "
+            f"(e.g. a dict), but {got_type} was provided"
+        )
+
+    # Check in_type['access']
+    if not isinstance(in_type["access"], collections.abc.Sequence):
+        got_type = type(in_type["access"]).__name__
+        raise InvalidTypeDescription(
+            "Value of type['access'] should be an instance of collections.abc.Sequence "
+            f"(e.g. a list), but {got_type} was provided"
+        )
+
+    return in_type  # type: ignore
 
 
 TYPES: Mapping[str, TypeDescription] = {
