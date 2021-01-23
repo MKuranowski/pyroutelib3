@@ -1,3 +1,5 @@
+.vscode
+.coverage
 tilescache*
 __pycache__*
 build*
