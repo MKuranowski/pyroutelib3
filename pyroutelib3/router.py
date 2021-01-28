@@ -27,6 +27,7 @@
 """Contains the Router implementation"""
 
 from typing import List, Dict, Tuple
+from math import inf
 import heapq
 
 from .datastore import Datastore
@@ -156,7 +157,7 @@ class Router(Datastore):
                 )
 
                 # Check if a cheaper route to toNode exists
-                if newItem.costTo > knownScores.get(toNode, float("inf")):
+                if newItem.costTo > knownScores.get(toNode, inf):
                     continue
 
                 # Check if we run into a restriction

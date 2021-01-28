@@ -29,6 +29,7 @@
 from urllib.request import urlretrieve
 from osmiter import iter_from_osm
 from typing import Any, Dict, IO, List, Literal, Mapping, Set, Tuple, Union, Optional
+from math import inf
 import time
 import os
 
@@ -125,7 +126,7 @@ class Datastore:
         try:
             downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
         except OSError:
-            downloadedSecondsAgo = float("inf")
+            downloadedSecondsAgo = inf
 
         if downloadedSecondsAgo >= self.expireData:
             left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
@@ -325,7 +326,7 @@ class Datastore:
 
         # Naive NN search
         bestId = -1
-        bestDist = float("inf")
+        bestDist = inf
 
         if len(self.rnodes) <= 0:
             raise KeyError("findNode in an empty space")
