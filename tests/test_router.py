@@ -1,4 +1,3 @@
-from pyroutelib3.util import distEuclidian
 import pyroutelib3
 
 # Checked Graph:
@@ -13,7 +12,7 @@ import pyroutelib3
 
 
 def prepare_router():
-    r = pyroutelib3.Router("car", distFunction=distEuclidian)
+    r = pyroutelib3.Router("car", distFunction=pyroutelib3.distEuclidian)
     r.localFile = True
 
     r.rnodes[1] = (1, 1)
