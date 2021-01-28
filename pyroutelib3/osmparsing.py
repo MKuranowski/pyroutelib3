@@ -111,7 +111,7 @@ def getWayOneway(way: dict, profile_name: str) -> int:
 # Relation processing
 
 
-def _reoderRelNodes(rel_id: int, rel_nodes: List[List[int]]):
+def _reoderRelNodes(rel_id: int, rel_nodes: List[List[int]]) -> None:
     """Reverses mebers of relation to ensure that rel_nodes[i][-1] == rel_nodes[i + 1][0]"""
     for i in range(len(rel_nodes) - 1):
         # Only reverse rel_nodes[i + 1], so that a sub-list is not reversed twice.
@@ -200,7 +200,7 @@ def getRelationNodes(
     return result
 
 
-def getFlatRelNodes(a: List[List[int]]) -> List[int]:
+def getFlatRelNodes(a: Sequence[Sequence[int]]) -> List[int]:
     """Flattens a list of all member's nodes to a list of node ids."""
     result = [a[0][0]]
     previous = a[0][0]
@@ -215,6 +215,7 @@ def getFlatRelNodes(a: List[List[int]]) -> List[int]:
 
 
 # Tile processing
+# see https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 
 
 def _mercToLat(x: float) -> float:

@@ -40,7 +40,7 @@
 
 from .datastore import Datastore
 from .router import Router
-from .types import TYPES
+from .types import TypeDescription, TYPES
 from .util import SEARCH_LIMIT, TILES_ZOOM, distHaversine, distEuclidian
 
 __title__ = "pyroutelib3"

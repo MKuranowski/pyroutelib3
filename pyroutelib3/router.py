@@ -119,7 +119,7 @@ class Router(Datastore):
             if searched > SEARCH_LIMIT:
                 return "gave_up", []
 
-            # Retrieve and item from queue
+            # Retrieve an item from queue
             currItem = heapq.heappop(queue)
             currToLen = len(currItem.routeTo)
 

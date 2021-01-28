@@ -28,7 +28,7 @@
 
 from urllib.request import urlretrieve
 from osmiter import iter_from_osm
-from typing import Any, BinaryIO, Dict, List, Mapping, Set, Tuple, Union, Optional
+from typing import Any, Dict, IO, List, Literal, Mapping, Set, Tuple, Union, Optional
 import time
 import os
 
@@ -62,8 +62,8 @@ class Datastore:
     def __init__(
             self,
             transport: Union[str, TypeDescription, Mapping[str, Any]],
-            localfile: Union[None, str, bytes, int, BinaryIO] = None,
-            localfileType: str = "xml",
+            localfile: Union[None, str, bytes, int, IO[bytes]] = None,
+            localfileType: Literal['xml', 'gz', 'bz2', 'pbf'] = "xml",
             expireData: int = 30,
             ignoreDataErrs: bool = True,
             distFunction: DistFunction = distHaversine) -> None:
@@ -94,7 +94,7 @@ class Datastore:
 
     # Data Loading
 
-    def getArea(self, lat: float, lon: float):
+    def getArea(self, lat: float, lon: float) -> None:
         """Download data in the vicinity of a position.
         No-op if `self.localFile`."""
         # Don't download data if we loaded a custom OSM file
@@ -137,8 +137,8 @@ class Datastore:
 
         self.loadOsm(filename, "xml")
 
-    def loadOsm(self, osm_file: Union[str, bytes, int, BinaryIO],
-                osm_file_format: str = "xml") -> None:
+    def loadOsm(self, osm_file: Union[str, bytes, int, IO[bytes]],
+                osm_file_format: Literal['xml', 'gz', 'bz2', 'pbf'] = "xml") -> None:
         """Parses provided osm file and saves routing data."""
         encounteredNodes: Dict[int, Position] = {}
         usedWays: Dict[int, List[int]] = {}
