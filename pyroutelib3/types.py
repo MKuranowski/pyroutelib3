@@ -2,7 +2,7 @@
 # Loading OSM data and doing routing with it
 # ---------------------------------------------------------------------------
 # Copyright 2007, Oliver White
-# Modifications: Copyright 2017-2020, Mikolaj Kuranowski -
+# Modifications: Copyright 2017-2021, Mikolaj Kuranowski -
 # Based on https://github.com/gaulinmp/pyroutelib2
 # ---------------------------------------------------------------------------
 # This file is part of pyroutelib3.

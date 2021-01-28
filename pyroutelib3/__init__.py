@@ -2,7 +2,7 @@
 # Loading OSM data and doing routing with it
 # ---------------------------------------------------------------------------
 # Copyright 2007, Oliver White
-# Modifications: Copyright 2017-2020, Mikolaj Kuranowski -
+# Modifications: Copyright 2017-2021, Mikolaj Kuranowski -
 # Based on https://github.com/gaulinmp/pyroutelib2
 # ---------------------------------------------------------------------------
 # This file is part of pyroutelib3.
@@ -48,10 +48,10 @@ __description__ = "Library for simple routing on OSM data"
 __url__ = "https://github.com/MKuranowski/pyroutelib3"
 __author__ = "Oliver White"
 __copyright__ = "Copyright 2007, Oliver White; " \
-                "Modifications: Copyright 2017-2020, Mikolaj Kuranowski"
+                "Modifications: Copyright 2017-2021, Mikolaj Kuranowski"
 __credits__ = ["Oliver White", "Mikolaj Kuranowski"]
 __license__ = "GPL v3"
 __version__ = "1.7.0-pre2"
 __maintainer__ = "Mikolaj Kuranowski"
-__email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 64,
-                                     103, 109, 97, 105, 108, 46, 99, 111, 109])
+__email__ = "".join(chr(i) for i in [109, 107, 117, 114, 97, 110, 111, 119, 115, 107, 105, 32, 91,
+                                     1072, 116, 93, 32, 103, 109, 97, 105, 108, 46, 99, 111, 109])
