@@ -1,16 +1,17 @@
 import pyroutelib3
-import io
 
-def test_distance():
+
+def test_distHaversine():
     warsaw = (52.2298, 21.0118)
     johanesburg = (-26.2023, 28.0436)
     tokyo = (35.6895, 139.6917)
 
-    distance_jo = pyroutelib3.Datastore.distance(warsaw, johanesburg)
-    distance_to = pyroutelib3.Datastore.distance(warsaw, tokyo)
+    distance_jo = pyroutelib3.distHaversine(warsaw, johanesburg)
+    distance_to = pyroutelib3.distHaversine(warsaw, tokyo)
 
     assert 8748 < distance_jo < 8749, "incorrect haversine implementation"
     assert 8578 < distance_to < 8579, "incorrect haversine implementation"
+
 
 def test_processing():
     r = pyroutelib3.Router("car", "tests/simple_graph.osm", "xml")
