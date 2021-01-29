@@ -28,7 +28,8 @@
 
 from urllib.request import urlretrieve
 from osmiter import iter_from_osm
-from typing import Any, Dict, IO, List, Literal, Mapping, Set, Tuple, Union, Optional
+from typing_extensions import Literal
+from typing import Any, Dict, IO, List, Mapping, Set, Tuple, Union, Optional
 from math import inf
 import time
 import os
