@@ -27,7 +27,6 @@
 """Contains other useful junk"""
 
 from typing import Callable, List, Tuple
-from dataclasses import dataclass, field
 import math
 
 
@@ -60,10 +59,28 @@ def distEuclidian(n1: Position, n2: Position) -> float:
     return dx ** 2 + dy ** 2
 
 
-@dataclass(eq=True, order=True, frozen=False)
 class _AStarQueueItem:
-    node: int = field(compare=False)
-    routeTo: List[int] = field(compare=False)
-    costTo: float = field(compare=False)
-    heuristic: float = field(compare=True)
-    forceNext: List[int] = field(compare=False, default_factory=list)
+    def __init__(
+            self,
+            node: int,
+            routeTo: List[int],
+            costTo: float,
+            heuristic: float,
+            forceNext: List[int] = None) -> None:
+        self.node: int = node
+        self.routeTo: List[int] = routeTo
+        self.costTo: float = costTo
+        self.heuristic: float = heuristic
+        self.forceNext: List[int] = forceNext or []
+
+    def __eq__(self, other: "_AStarQueueItem") -> bool:
+        return self.node == other.node \
+            and self.routeTo == other.routeTo \
+            and self.costTo == other.costTo \
+            and self.heuristic == other.heuristic \
+            and self.forceNext == other.forceNext
+
+    def __lt__(self, other: "_AStarQueueItem") -> bool: return self.heuristic < other.heuristic
+    def __le__(self, other: "_AStarQueueItem") -> bool: return self.heuristic <= other.heuristic
+    def __gt__(self, other: "_AStarQueueItem") -> bool: return self.heuristic > other.heuristic
+    def __ge__(self, other: "_AStarQueueItem") -> bool: return self.heuristic >= other.heuristic
