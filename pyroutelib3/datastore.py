@@ -175,10 +175,14 @@ class Datastore:
                 try:
                     self.storeRestriction(feature, usedWays)
                 except (OsmReferenceError, OsmInvalidRestriction):
-                    continue
+                    if self.ignoreDataErrs:
+                        continue
+                    else:
+                        raise
 
             else:
-                raise OsmStructureError(f"Unexpected feature type: {feature['type']!r}")
+                raise OsmStructureError(f"Unexpected feature type: {feature['type']!r} "
+                                        f"on feature with id {feature['id']!r}")
 
     def storeWay(self, way: dict, knownNodes: Dict[int, Any]) -> bool:
         """Parses an OSM way and saves routing data derived from this way."""
@@ -250,7 +254,8 @@ class Datastore:
 
         if restrType is None:
             raise OsmInvalidRestriction(
-                f"Relation with type {rel['tag']['type']!r}, but no matching 'restriction'/"
+                f"Relation with id={rel['id']} and type={rel['tag']['type']!r} "
+                f"has no matching 'restriction'/"
                 f"'{'restriction' + self.transport!r} tag!")
 
         if restrType.startswith("no_"):
@@ -258,7 +263,7 @@ class Datastore:
         elif restrType.startswith("only_"):
             self.storeRestrictionMandatory(rel["id"], relNodes)
         else:
-            raise OsmInvalidRestriction(f"Invalid restriction type of {rel['id']} "
+            raise OsmInvalidRestriction(f"Invalid restriction type of {rel['id']}: "
                                         f"({restrType!r})")
 
         return True
