@@ -245,12 +245,13 @@ class Datastore:
         relNodes = getRelationNodes(rel, self.rnodes.keys(), usedWays)
 
         # Get the restriction type
-        profileSpecificKey = "restriction:" + self.transport
-        if profileSpecificKey in rel["tag"]:
-            restrType = rel["tag"][profileSpecificKey]
-        else:
-            restrType = rel["tag"]["restriction"]
-        del profileSpecificKey
+        restrType = rel["tag"].get("restriction:" + self.transport) \
+            or rel["tag"].get("restriction")
+
+        if restrType is None:
+            raise OsmInvalidRestriction(
+                f"Relation with type {rel['tag']['type']!r}, but no matching 'restriction'/"
+                f"'{'restriction' + self.transport!r} tag!")
 
         if restrType.startswith("no_"):
             self.storeRestrictionForbidden(rel["id"], relNodes)
