@@ -40,6 +40,11 @@ from .types import TYPES, TypeDescription, validate_type
 from .util import TILES_ZOOM, Position, DistFunction, distHaversine
 from .err import InvalidNode, OsmInvalidRestriction, OsmReferenceError, OsmStructureError
 
+API_SOURCES = {
+    "osm": "https://api.openstreetmap.org/api/0.6/",
+    "overpass": "https://www.overpass-api.de/api/xapi?",
+}
+
 
 class Datastore:
     # Graph data
@@ -68,13 +73,18 @@ class Datastore:
             localfileType: Literal['xml', 'gz', 'bz2', 'pbf'] = "xml",
             expireData: int = 30,
             ignoreDataErrs: bool = True,
-            distFunction: DistFunction = distHaversine) -> None:
+            distFunction: DistFunction = distHaversine,
+            source="osm") -> None:
         # Graph data
         self.rnodes = {}
         self.routing = {}
         self.mandatoryMoves = {}
         self.forbiddenMoves = {}
         self.distance = distFunction
+
+        if source not in API_SOURCES:
+            raise RuntimeError(f"Bad API source {source}")
+        self.source_baseurl = API_SOURCES[source]
 
         # Profile type
         if isinstance(transport, str):
@@ -139,7 +149,7 @@ class Datastore:
             left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
 
             urlretrieve(
-                f"https://api.openstreetmap.org/api/0.6/map?bbox={left},{bottom},{right},{top}",
+                f"{self.source_baseurl}map?bbox={left},{bottom},{right},{top}",
                 filename
             )
 
