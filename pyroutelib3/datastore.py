@@ -33,6 +33,7 @@ from typing import Any, Dict, IO, List, Mapping, Set, Tuple, Union, Optional
 from math import inf
 import time
 import os
+from filelock import FileLock
 
 from .osmparsing import getWayAllowed, getWayOneway, getWayWeight, \
     getRelationNodes, getFlatRelNodes, getOsmTile, getTileBoundary
@@ -100,6 +101,8 @@ class Datastore:
         self.expireData = 86400 * expireData
         self.ignoreDataErrs = ignoreDataErrs
 
+        self.tilescache_lock = FileLock("tilescache.lock")
+
         # Load the given osmfile
         if localfile is not None:
             if isinstance(localfile, (list, tuple)):
@@ -128,32 +131,38 @@ class Datastore:
             return
 
         # Download tile data
-        self.tiles.add((x, y))
-        directory = os.path.join("tilescache", str(TILES_ZOOM), str(x), str(y))
-        filename = os.path.join(directory, "data.osm")
+        with self.tilescache_lock:
+            # Don't redownload tiles
+            if (x, y) in self.tiles:
+                return
 
-        # Make sure directory to which we download .osm files exists
-        os.makedirs(directory, exist_ok=True)
+            directory = os.path.join("tilescache", str(TILES_ZOOM), str(x), str(y))
+            filename = os.path.join(directory, "data.osm")
 
-        # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
-        if os.path.exists(filename + ".pkl"):
-            os.rename(filename + ".pkl", filename)
+            # Make sure directory to which we download .osm files exists
+            os.makedirs(directory, exist_ok=True)
 
-        # Don't redownload data from pre-expire date
-        try:
-            downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
-        except OSError:
-            downloadedSecondsAgo = inf
+            # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
+            if os.path.exists(filename + ".pkl"):
+                os.rename(filename + ".pkl", filename)
 
-        if downloadedSecondsAgo >= self.expireData:
-            left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
+            # Don't redownload data from pre-expire date
+            try:
+                downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
+            except OSError:
+                downloadedSecondsAgo = inf
 
-            urlretrieve(
-                f"{self.source_baseurl}map?bbox={left},{bottom},{right},{top}",
-                filename
-            )
+            if downloadedSecondsAgo >= self.expireData:
+                left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
 
-        self.loadOsm(filename, "xml")
+                urlretrieve(
+                    f"{self.source_baseurl}map?bbox={left},{bottom},{right},{top}",
+                    filename
+                )
+
+            self.loadOsm(filename, "xml")
+
+            self.tiles.add((x, y))
 
     def loadOsm(self, osm_file: Union[str, bytes, int, IO[bytes]],
                 osm_file_format: Literal['xml', 'gz', 'bz2', 'pbf'] = "xml") -> None:
