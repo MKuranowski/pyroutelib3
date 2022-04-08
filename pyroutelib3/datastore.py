@@ -92,7 +92,14 @@ class Datastore:
 
         # Load the given osmfile
         if localfile is not None:
-            self.loadOsm(localfile, localfileType)
+            if isinstance(localfile, (list, tuple)):
+                if not isinstance(localfileType, (list, tuple)):
+                    localfileType = [localfileType] * len(localfile)
+
+                for onelocalfile, onelocalfileType in zip(localfile, localfileType):
+                    self.loadOsm(onelocalfile, onelocalfileType)
+            else:
+                self.loadOsm(localfile, localfileType)
 
     # Data Loading
 
