@@ -116,11 +116,10 @@ class Datastore:
         filename = os.path.join(directory, "data.osm")
 
         # Make sure directory to which we download .osm files exists
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        os.makedirs(directory, exist_ok=True)
 
         # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
-        elif os.path.exists(filename + ".pkl"):
+        if os.path.exists(filename + ".pkl"):
             os.rename(filename + ".pkl", filename)
 
         # Don't redownload data from pre-expire date
