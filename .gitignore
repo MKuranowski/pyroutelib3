@@ -1,5 +1,6 @@
 .vscode
 .coverage
+.venv
 tilescache*
 __pycache__*
 build*
