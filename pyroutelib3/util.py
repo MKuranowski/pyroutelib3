@@ -34,6 +34,8 @@ Position = Tuple[float, float]
 DistFunction = Callable[[Position, Position], float]
 
 SEARCH_LIMIT: int = 1_000_000
+API_URL: str = "https://api.openstreetmap.org/api/0.6/map?bbox={left},{bottom},{right},{top}"
+TILES_DIR: str = "tilescache"
 TILES_ZOOM: int = 15
 
 

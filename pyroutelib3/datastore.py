@@ -39,7 +39,7 @@ import os
 from .osmparsing import getWayAllowed, getWayOneway, getWayWeight, \
     getRelationNodes, getFlatRelNodes, getOsmTile, getTileBoundary
 from .types import TYPES, TypeDescription, validate_type
-from .util import TILES_ZOOM, Position, DistFunction, distHaversine
+from .util import API_URL, TILES_DIR, TILES_ZOOM, Position, DistFunction, distHaversine
 from .err import InvalidNode, OsmInvalidRestriction, OsmReferenceError, OsmStructureError
 
 
@@ -105,7 +105,7 @@ class Datastore:
         if self.localFile:
             return
 
-        # Get info on tile in wich lat, lon lays
+        # Get info on tile in which lat, lon lays
         x, y = getOsmTile(lat, lon, TILES_ZOOM)
 
         # Don't redownload tiles
@@ -114,7 +114,7 @@ class Datastore:
 
         # Download tile data
         self.tiles.add((x, y))
-        directory = os.path.join("tilescache", str(TILES_ZOOM), str(x), str(y))
+        directory = os.path.join(TILES_DIR, str(TILES_ZOOM), str(x), str(y))
         filename = os.path.join(directory, "data.osm")
         lockname = os.path.join(directory, "lock")
 
@@ -138,8 +138,7 @@ class Datastore:
                 left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
 
                 urlretrieve(
-                    "https://api.openstreetmap.org/api/0.6/map"
-                    + f"?bbox={left},{bottom},{right},{top}",
+                    API_URL.format(left=left, bottom=bottom, right=right, top=top),
                     filename,
                 )
 
