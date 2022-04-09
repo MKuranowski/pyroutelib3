@@ -22,6 +22,7 @@
 # ---------------------------------------------------------------------------
 # Changelog:
 #  2020-10-23  MK   Refactor code
+#  2021-04-09  MK   Use lock to protect against races in tilescache/
 # ---------------------------------------------------------------------------
 
 """Contains the Datastore implementation"""
@@ -30,6 +31,7 @@ from urllib.request import urlretrieve
 from osmiter import iter_from_osm
 from typing_extensions import Literal
 from typing import Any, Dict, IO, List, Mapping, Set, Tuple, Union, Optional
+from filelock import FileLock
 from math import inf
 import time
 import os
@@ -114,28 +116,32 @@ class Datastore:
         self.tiles.add((x, y))
         directory = os.path.join("tilescache", str(TILES_ZOOM), str(x), str(y))
         filename = os.path.join(directory, "data.osm")
+        lockname = os.path.join(directory, "lock")
 
         # Make sure directory to which we download .osm files exists
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        os.makedirs(directory, exist_ok=True)
 
-        # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
-        elif os.path.exists(filename + ".pkl"):
-            os.rename(filename + ".pkl", filename)
+        # Ensure we hold a lock when modifying this particular data.osm
+        with FileLock(lockname).acquire():
 
-        # Don't redownload data from pre-expire date
-        try:
-            downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
-        except OSError:
-            downloadedSecondsAgo = inf
+            # In versions prior to 1.0 tiles were saved to tilescache/z/x/y/data.osm.pkl
+            if os.path.exists(filename + ".pkl"):
+                os.rename(filename + ".pkl", filename)
 
-        if downloadedSecondsAgo >= self.expireData:
-            left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
+            # Don't redownload data from pre-expire date
+            try:
+                downloadedSecondsAgo = time.time() - os.path.getmtime(filename)
+            except OSError:
+                downloadedSecondsAgo = inf
 
-            urlretrieve(
-                f"https://api.openstreetmap.org/api/0.6/map?bbox={left},{bottom},{right},{top}",
-                filename
-            )
+            if downloadedSecondsAgo >= self.expireData:
+                left, bottom, right, top = getTileBoundary(x, y, TILES_ZOOM)
+
+                urlretrieve(
+                    "https://api.openstreetmap.org/api/0.6/map"
+                    + f"?bbox={left},{bottom},{right},{top}",
+                    filename,
+                )
 
         self.loadOsm(filename, "xml")
 

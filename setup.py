@@ -25,6 +25,6 @@ setup(
     ],
     packages=find_packages(include=["pyroutelib3", "pyroutelib3.*"]),
     python_requires=">=3.6, <4",
-    install_requires=["osmiter>=1.1", "typing_extensions"],
+    install_requires=["osmiter>=1.1", "typing_extensions", "filelock"],
     data_files=["LICENSE.txt", "README.md"],
 )
