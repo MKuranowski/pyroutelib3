@@ -1,10 +1,2 @@
-.vscode
-.coverage
 .venv
-tilescache*
-__pycache__*
-build*
-dist*
-*.egg-info
-.pytest_cache
-ignore*
+*.pyc

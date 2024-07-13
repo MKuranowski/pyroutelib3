@@ -1,0 +1,31 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "pyroutelib3"
+authors = [{name = "Mikołaj Kuranowski", email = "mkuranowski+pypackages@gmail.com"}]
+readme = "README.md"
+dynamic = ["version", "description"]
+requires-python = ">=3.8, <4"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Home = "https://github.com/MKuranowski/pyroutelib3"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pyright]
+typeCheckingMode = "strict"
