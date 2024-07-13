@@ -1,6 +1,7 @@
-import pyroutelib3
-import shutil
 import os
+import shutil
+
+import pyroutelib3
 
 
 def test_live():
@@ -34,7 +35,7 @@ def test_live():
 
     # Count up the number of tiles
     count = 0
-    for (_, _, fnames) in os.walk("tilescache"):
+    for _, _, fnames in os.walk("tilescache"):
         for f in fnames:
             if f == "data.osm":
                 count += 1
