@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Tuple
 from unittest import TestCase
 
 from .distance import euclidean_distance
@@ -26,7 +26,7 @@ class Graph(GraphLike[Node]):
     def get_node(self, id: int) -> Node:
         return self.nodes[id]
 
-    def get_edges(self, id: int) -> Iterable[tuple[int, float]]:
+    def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
         return self.edges[id].items()
 
 
