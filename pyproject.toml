@@ -29,3 +29,4 @@ line_length = 100
 
 [tool.pyright]
 typeCheckingMode = "strict"
+ignore = ["tests"]
