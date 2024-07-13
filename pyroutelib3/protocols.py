@@ -60,7 +60,7 @@ class GraphLike(Protocol[NodeLikeT_co]):
         """
         ...
 
-    def get_edges(self, id: int) -> Iterable[tuple[int, float]]:
+    def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
         """get_edges must return all edges outgoing from a *node* with the provided ID.
         The edges are a pair of (node_id, cost). All returned neighbor nodes must
         exist in the graph.
