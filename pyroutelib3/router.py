@@ -154,7 +154,7 @@ def find_route_without_turn_around(
 
 def _reconstruct_path(came_from: Mapping[int, int], last: int) -> List[int]:
     path = [last]
-    nd: int | None = last
+    nd: Optional[int] = last
     while (nd := came_from.get(nd)) is not None:
         path.append(nd)
     path.reverse()
@@ -166,7 +166,7 @@ def _reconstruct_path_without_turn_around(
     last: _NodeAndBefore,
 ) -> List[int]:
     path = [last.node_id]
-    nd: _NodeAndBefore | None = last
+    nd: Optional[_NodeAndBefore] = last
     while (nd := came_from.get(nd)) is not None:
         path.append(nd.node_id)
     path.reverse()
