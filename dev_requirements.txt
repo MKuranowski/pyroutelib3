@@ -1,4 +1,0 @@
-pytest
-osmiter >= 1.1
-typing_extensions
-filelock
