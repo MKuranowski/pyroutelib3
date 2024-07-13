@@ -5,6 +5,10 @@ Routing on OSM data in Python 3.
 
 OSM Data tiles is stored in `tilescache/`
 
+## ⚠️ Version warning
+
+A planned major 2.0.0 release will come with breaking API changes; as per semantic versioning.
+Make sure your requirement files specify `pyroutelib3 <2.0.0` to prevent your code from breaking.
 
 ## Usage
 
@@ -29,7 +33,7 @@ if status == 'success':
 ##### Offline Routing
 
 If you want to use pyroutelib3 offline or on custom .osm file, you just need to add a second argument to Router:
-Path to the specific osm file. 
+Path to the specific osm file.
 
 ```python
 from pyroutelib3 import Router
