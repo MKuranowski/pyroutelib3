@@ -1,7 +1,7 @@
+import sys
 from dataclasses import dataclass, field
 from functools import singledispatchmethod
 from io import DEFAULT_BUFFER_SIZE
-from itertools import pairwise
 from logging import getLogger
 from math import isfinite
 from typing import (
@@ -30,6 +30,21 @@ _MAX_OSM_NODE_ID = 0x0008_0000_0000_0000
 """_MAX_OSM_NODE_ID is the maximum permitted ID of a node coming from OpenStreetMap.
 Values of _MAX_OSM_NODE_ID and above are used for phantom nodes created by turn restrictions.
 """
+
+if sys.version_info < (3, 10):
+    from typing import TypeVar, cast
+
+    _T = TypeVar("_T")
+
+    def pairwise(iterable: Iterable[_T]) -> Iterable[Tuple[_T, _T]]:
+        it = iter(iterable)
+        a = next(it, None)
+        for b in it:
+            yield cast(_T, a), b
+            a = b
+
+else:
+    from itertools import pairwise
 
 
 class OSMProfile(Protocol):
