@@ -13,6 +13,8 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install project dependencies
+      run: pip install -Ur requirements.txt
     - name: Run tests
       run: python -m unittest
   lint:
@@ -24,6 +26,8 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.8"
+    - name: Install project dependencies
+      run: pip install -Ur requirements.txt
     - name: Install development dependencies
       run: pip install -U black isort
     - name: Check code formatting
