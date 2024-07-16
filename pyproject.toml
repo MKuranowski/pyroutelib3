@@ -16,6 +16,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+dependencies = [
+    "typing_extensions >=4, <5"
+]
 
 [project.urls]
 Home = "https://github.com/MKuranowski/pyroutelib3"
