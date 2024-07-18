@@ -53,7 +53,7 @@ class Relation:
 
 Feature = Union[Node, Way, Relation]
 """Feature represents a single `OpenStreetMap feature <https://wiki.openstreetmap.org/wiki/Map_features>`_:
-a :py:class:`Node`, :py:class:`Way` or :py:class`Relation`.
+a :py:class:`Node`, :py:class:`Way` or :py:class:`Relation`.
 """
 
 
