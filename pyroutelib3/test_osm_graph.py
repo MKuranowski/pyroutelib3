@@ -88,12 +88,12 @@ class TestOSMGraph(TestCase):
             g = OSMGraph.from_file(OSM_PROFILE_CAR, f)
 
         # Check the loaded amount of nodes
-        self.assertEqual(len(g.data), 12)
+        self.assertEqual(len(g.data), 14)
 
         # Check edge costs
-        self.assertAlmostEqual(g.data[-1].edges[-2], 1.4035, places=3)
-        self.assertEqual(g.data[-1].edges[-2], g.data[-2].edges[-1])
         self.assertAlmostEqual(g.data[-62].edges[-7], 2.0385, places=3)
+        self.assertEqual(g.data[-7].edges[-62], g.data[-62].edges[-7])
+        self.assertAlmostEqual(g.data[-2].edges[-1], 1.4035, places=3)
 
         # Check oneway handling: -4 → -3 → -5 → -7 → -4
         self.assertEdge(g, -4, -3)
@@ -120,23 +120,21 @@ class TestOSMGraph(TestCase):
         self.assertNoEdge(g, -61, -2)
 
         # Check turn restriction -200: no -8 → -7 → -3
-        # TODO: Re-enable checks when turn restrictions are handled
-        # self.assertNoEdge(g, -8, -7)
-        # phantom_nodes = [id for id in g.data[-8].edges if g.data[id].osm_id == -7]
-        # self.assertEqual(len(phantom_nodes), 1)
-        # phantom_node = phantom_nodes[0]
-        # self.assertEdge(g, -8, phantom_node)
-        # self.assertNoEdge(g, phantom_node, -3)
+        self.assertNoEdge(g, -8, -7)
+        phantom_nodes = [id for id in g.data[-8].edges if g.data[id].osm_id == -7]
+        self.assertEqual(len(phantom_nodes), 1)
+        phantom_node = phantom_nodes[0]
+        self.assertEdge(g, -8, phantom_node)
+        self.assertNoEdge(g, phantom_node, -3)
 
         # Check turn restriction with except=car, -201: no -7 → -3 → -5
         self.assertEdge(g, -7, -3)
         self.assertEdge(g, -3, -5)
 
         # Check turn restriction: only -1 → -2 → -3
-        # TODO: Re-enable checks when turn restrictions are handled
-        # self.assertNoEdge(g, -1, -2)
-        # phantom_nodes = [id for id in g.data[-1].edges if g.data[id].osm_id == -2]
-        # self.assertEqual(len(phantom_nodes), 1)
-        # phantom_node = phantom_nodes[0]
-        # self.assertEdge(g, -1, phantom_node)
-        # self.assertSetEqual(set(g.data[phantom_node].edges.keys()), {-3})
+        self.assertNoEdge(g, -1, -2)
+        phantom_nodes = [id for id in g.data[-1].edges if g.data[id].osm_id == -2]
+        self.assertEqual(len(phantom_nodes), 1)
+        phantom_node = phantom_nodes[0]
+        self.assertEdge(g, -1, phantom_node)
+        self.assertSetEqual(set(g.data[phantom_node].edges.keys()), {-3})
