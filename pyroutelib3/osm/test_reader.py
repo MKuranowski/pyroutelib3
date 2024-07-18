@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
 
-from .osm_reader import Node, Relation, RelationMember, Way, collect_all_features
+from .reader import Node, Relation, RelationMember, Way, collect_all_features
 
 FIXTURES_DIR = Path(__file__).with_name("fixtures")
 

@@ -4,31 +4,20 @@ from functools import singledispatchmethod
 from io import DEFAULT_BUFFER_SIZE
 from logging import getLogger
 from math import isfinite
-from typing import (
-    IO,
-    ClassVar,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Protocol,
-    Set,
-    Tuple,
-)
+from typing import IO, Dict, Iterable, List, Literal, Optional, Set, Tuple
 
 from typing_extensions import Self
 
-from . import osm_reader
-from .distance import haversine_earth_distance
-from .protocols import Position
+from ..distance import haversine_earth_distance
+from ..protocols import Position
+from . import reader
+from .profile import Profile
 
 osm_logger = getLogger("pyroutelib3.osm")
 
-_MAX_OSM_NODE_ID = 0x0008_0000_0000_0000
-"""_MAX_OSM_NODE_ID is the maximum permitted ID of a node coming from OpenStreetMap.
-Values of _MAX_OSM_NODE_ID and above are used for phantom nodes created by turn restrictions.
+_MAX_NODE_ID = 0x0008_0000_0000_0000
+"""_MAX_NODE_ID is the maximum permitted ID of a node coming from OpenStreetMap.
+Values of _MAX_NODE_ID and above are used for phantom nodes created by turn restrictions.
 """
 
 if sys.version_info < (3, 10):
@@ -47,211 +36,9 @@ else:
     from itertools import pairwise
 
 
-class OSMProfile(Protocol):
-    """Profile instructs how :py:class:`OSMGraph` should convert OSM features into a
-    routing graph.
-    """
-
-    def way_penalty(self, __way_tags: Mapping[str, str]) -> Optional[float]:
-        """way_penalty must return the penalty for traversing a way with the provided tags,
-        or ``None`` if the way is not traversable.
-
-        The returned penalty is then multiplied by the each way's segment length
-        to get the cost of traversing an edge.
-
-        The returned value must be finite and at least 1.
-        """
-        ...
-
-    def way_direction(self, __way_tags: Mapping[str, str]) -> Tuple[bool, bool]:
-        """way_direction must determine whether a way with the provided tags
-        is traversable forward and backward. First element in the returned tuple
-        must represent the forward direction, while the second - backward direction.
-        """
-        ...
-
-    def is_exempted(self, __restriction_tags: Mapping[str, str]) -> bool:
-        """is_exempted must determine whether the current Profile is exempted
-        from adhering to the provided `turn restriction <https://wiki.openstreetmap.org/wiki/Relation:restriction>`_
-        based on its tags.
-        """
-        ...
-
-
-@dataclass
-class OSMHighwayProfile:
-    """OSMHighwayProfile implements :py:class:`OSMProfile` for routing over highway=* ways."""
-
-    name: str
-
-    penalties: Dict[str, float] = field(repr=False)
-    """penalties maps highway tag values (after transformation through :py:obj:`EQUIVALENT_TAGS`)
-    into their corresponding penalties. All penalties must be finite and not smaller than 1.
-    """
-
-    access: List[str] = field(repr=False)
-    """access is the hierarchy of `access tags <https://wiki.openstreetmap.org/wiki/Key:access>`_
-    to consider when checking if a route is traversable. Keys must be listed from least-specific
-    first.
-    """
-
-    EQUIVALENT_TAGS: ClassVar[Mapping[str, str]] = {
-        "motorway_link": "motorway",
-        "trunk_link": "trunk",
-        "primary_link": "primary",
-        "secondary_link": "secondary",
-        "tertiary_link": "tertiary",
-        "minor": "unclassified",
-        "pedestrian": "footway",
-        "platform": "footway",
-    }
-
-    def way_penalty(self, way_tags: Mapping[str, str]) -> Optional[float]:
-        # Get the penalty of the highway tag
-        highway = way_tags.get("highway", "")
-        highway = self.EQUIVALENT_TAGS.get(highway, highway)
-        penalty = self.penalties.get(highway)
-        if penalty is None:
-            return None
-
-        # Check if the way is traversable, as per the access tags
-        if not self.is_allowed(way_tags):
-            return None
-
-        return penalty
-
-    def is_allowed(self, way_tags: Mapping[str, str]) -> bool:
-        allowed = True
-        for access_tag in self.access:
-            value = way_tags.get(access_tag)
-            if value is None:
-                pass
-            elif value in ("no", "private"):
-                allowed = False
-            else:
-                allowed = True
-        return allowed
-
-    def way_direction(self, way_tags: Mapping[str, str]) -> Tuple[bool, bool]:
-        # Start by assuming two-way
-        forward = True
-        backward = True
-
-        # Default one-way ways
-        # fmt: off
-        if (
-            way_tags.get("highway") in ("motorway", "motorway_link")
-            or way_tags.get("junction") in ("roundabout", "circular")
-        ):
-            # fmt: on
-            backward = False
-
-        # Check against the oneway tag
-        oneway = way_tags.get("oneway")
-        if oneway in ("yes", "true", "1"):
-            forward = True
-            backward = False
-        elif oneway in ("-1", "reverse"):
-            forward = False
-            backward = True
-        elif oneway == "no":
-            forward = True
-            backward = True
-
-        return forward, backward
-
-    def is_exempted(self, restriction_tags: Mapping[str, str]) -> bool:
-        exempted = restriction_tags.get("except")
-        if exempted is None:
-            return False
-        return any(exempted_type in self.access for exempted_type in exempted.split(";"))
-
-
-OSM_PROFILE_CAR = OSMHighwayProfile(
-    name="motorcar",
-    penalties={
-        "motorway": 1.0,
-        "trunk": 1.0,
-        "primary": 5.0,
-        "secondary": 6.5,
-        "tertiary": 10.0,
-        "unclassified": 10.0,
-        "residential": 15.0,
-        "living_street": 20.0,
-        "track": 20.0,
-        "service": 20.0,
-    },
-    access=["access", "vehicle", "motor_vehicle", "motorcar"],
-)
-"""OSM_PROFILE_CAR is a :py:class:`OSMHighwayProfile` which can be used for car routing."""
-
-OSM_PROFILE_BUS = OSMHighwayProfile(
-    name="bus",
-    penalties={
-        "motorway": 1.0,
-        "trunk": 1.0,
-        "primary": 1.1,
-        "secondary": 1.15,
-        "tertiary": 1.15,
-        "unclassified": 1.5,
-        "residential": 2.5,
-        "living_street": 2.5,
-        "track": 5.0,
-        "service": 5.0,
-    },
-    access=["access", "vehicle", "motor_vehicle", "psv", "bus", "routing:ztm"],
-)
-"""OSM_PROFILE_BUS is a :py:class:`OSMHighwayProfile` which can be used for bus routing."""
-
-
-OSM_PROFILE_CYCLE = OSMHighwayProfile(
-    name="bicycle",
-    penalties={
-        "trunk": 50.0,
-        "primary": 10.0,
-        "secondary": 3.0,
-        "tertiary": 2.5,
-        "unclassified": 2.5,
-        "cycleway": 1.0,
-        "residential": 1.0,
-        "living_street": 1.5,
-        "track": 2.0,
-        "service": 2.0,
-        "bridleway": 3.0,
-        "footway": 3.0,
-        "steps": 5.0,
-        "path": 2.0,
-    },
-    access=["access", "vehicle", "bicycle"],
-)
-"""OSM_PROFILE_CYCLE is a :py:class:`OSMHighwayProfile` which can be used for bicycle routing."""
-
-
-OSM_PROFILE_FOOT = OSMHighwayProfile(
-    name="foot",
-    penalties={
-        "trunk": 4.0,
-        "primary": 2.0,
-        "secondary": 1.3,
-        "tertiary": 1.2,
-        "unclassified": 1.2,
-        "residential": 1.2,
-        "living_street": 1.2,
-        "track": 1.2,
-        "service": 1.2,
-        "bridleway": 1.2,
-        "footway": 1.0,
-        "path": 1.0,
-        "steps": 1.15,
-    },
-    access=["access", "foot"],
-)
-"""OSM_PROFILE_FOOT is a :py:class:`OSMHighwayProfile` which can be used for on-foot routing."""
-
-
 @dataclass(frozen=True)
-class OSMGraphNode:
-    """OSMGraphNode is a *node* in a :py:class:`OSMGraph`."""
+class GraphNode:
+    """GraphNode is a *node* in a :py:class:`Graph`."""
 
     id: int
     position: Position
@@ -263,38 +50,38 @@ class OSMGraphNode:
         return self.osm_id
 
 
-class OSMGraph:
-    """OSMGraph implements :py:class:`GraphLike` over OpenStreetMap data."""
+class Graph:
+    """Graph implements :py:class:`GraphLike` over OpenStreetMap data."""
 
-    profile: OSMProfile
-    data: Dict[int, OSMGraphNode]
+    profile: Profile
+    data: Dict[int, GraphNode]
 
     _phantom_node_id_counter: int
     """_phantom_node_id_counter is a counter used for generating IDs for phantom nodes
-    created when processing turn restriction. Used by :py:class:`_OSMGraphBuilder` and
-    :py:class:`_OSMGraphChange`.
+    created when processing turn restriction. Used by :py:class:`_GraphBuilder` and
+    :py:class:`_GraphChange`.
     """
 
     def __init__(
         self,
-        profile: OSMProfile,
-        data: Optional[Dict[int, OSMGraphNode]] = None,
+        profile: Profile,
+        data: Optional[Dict[int, GraphNode]] = None,
     ) -> None:
         self.profile = profile
         self.data = data or {}
-        self._phantom_node_id_counter = _MAX_OSM_NODE_ID
+        self._phantom_node_id_counter = _MAX_NODE_ID
 
-    def get_node(self, id: int) -> OSMGraphNode:
+    def get_node(self, id: int) -> GraphNode:
         return self.data[id]
 
     def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
         return self.data[id].edges.items()
 
-    def find_nearest_node(self, position: Position) -> OSMGraphNode:
+    def find_nearest_node(self, position: Position) -> GraphNode:
         """find_nearest_node finds the closest node to the provided :py:obj:`Position`.
         Phantom nodes ``nd.id != nd.osm_id`` created by turn restrictions are not considered.
 
-        This function iterates over every contained :py:class:`OSMGraphNode`, and can be
+        This function iterates over every contained :py:class:`GraphNode`, and can be
         very slow for big graphs. Use a helper data structure (like a K-D tree) if this function
         becomes a performance bottleneck.
         """
@@ -304,7 +91,7 @@ class OSMGraph:
             key=lambda nd: haversine_earth_distance(position, nd.position),
         )
 
-    def add_features(self, features: Iterable[osm_reader.Feature]) -> None:
+    def add_features(self, features: Iterable[reader.Feature]) -> None:
         """add_features adds OpenStreetMap data to the graph.
 
         While it is permitted to call this function multiple times on the same graph,
@@ -328,11 +115,11 @@ class OSMGraph:
         Any issues with incoming OSM data are reported as warnings through the
         ``pyroutelib3.osm`` logger.
         """
-        _OSMGraphBuilder.add_features_to(self, features)
+        _GraphBuilder.add_features_to(self, features)
 
     @classmethod
-    def from_features(cls, profile: OSMProfile, features: Iterable[osm_reader.Feature]) -> Self:
-        """Creates a :py:class:`OSMGraph` based on the provided ``profile`` and ``features``."""
+    def from_features(cls, profile: Profile, features: Iterable[reader.Feature]) -> Self:
+        """Creates a :py:class:`Graph` based on the provided ``profile`` and ``features``."""
         g = cls(profile)
         g.add_features(features)
         return g
@@ -340,31 +127,31 @@ class OSMGraph:
     @classmethod
     def from_file(
         cls,
-        profile: OSMProfile,
+        profile: Profile,
         buf: IO[bytes],
         format: Optional[Literal["xml", "bz2", "gz"]] = None,
         chunk_size: int = DEFAULT_BUFFER_SIZE,
     ) -> Self:
-        """Creates a :py:class:`OSMGraph` based on the provided ``profile`` and features
+        """Creates a :py:class:`Graph` based on the provided :py:class:`Profile` and features
         from the provided OSM file.
 
-        ``format`` and ``chunk_size`` are passed through to :py:func:`osm_reader.read_features`.
+        ``format`` and ``chunk_size`` are passed through to :py:func:`osm.reader.read_features`.
         """
-        return cls.from_features(profile, osm_reader.read_features(buf, format, chunk_size))
+        return cls.from_features(profile, reader.read_features(buf, format, chunk_size))
 
 
 @dataclass
-class _OSMGraphBuilder:
-    """_OSMGraphBuilder is responsible for adding a self-contained batch of features to
-    a :py:class:`OSMGraph`.
+class _GraphBuilder:
+    """_GraphBuilder is responsible for adding a self-contained batch of features to
+    a :py:class:`Graph`.
 
-    See the restrictions on :py:meth:`OSMGraph.add_features` for underlying data assumptions.
+    See the restrictions on :py:meth:`Graph.add_features` for underlying data assumptions.
 
     Usage::
-        _OSMGraphBuilder.add_features_to(osm_graph, features)
+        _GraphBuilder.add_features_to(graph, features)
     """
 
-    g: OSMGraph
+    g: Graph
 
     unused_nodes: Set[int] = field(default_factory=set)
     """unused_nodes is a set of nodes added to the graph which weren't used
@@ -375,22 +162,22 @@ class _OSMGraphBuilder:
     """way_nodes maps way_ids to its sequence of nodes, required for relation processing."""
 
     @classmethod
-    def add_features_to(cls, graph: OSMGraph, features: Iterable[osm_reader.Feature]) -> None:
+    def add_features_to(cls, graph: Graph, features: Iterable[reader.Feature]) -> None:
         self = cls(graph)
         self.add_features(features)
         self.cleanup()
 
-    def add_features(self, features: Iterable[osm_reader.Feature]) -> None:
+    def add_features(self, features: Iterable[reader.Feature]) -> None:
         for feature in features:
             self.add_feature(feature)
 
     @singledispatchmethod
-    def add_feature(self, feature: osm_reader.Feature) -> None:
+    def add_feature(self, feature: reader.Feature) -> None:
         raise RuntimeError(f"invalid feature type: {type(feature).__qualname__}")
 
     @add_feature.register
-    def add_node(self, node: osm_reader.Node) -> None:
-        if node.id >= _MAX_OSM_NODE_ID:
+    def add_node(self, node: reader.Node) -> None:
+        if node.id >= _MAX_NODE_ID:
             raise RuntimeError(
                 f"OpenStreetMap node uses a very big ID ({node.id}). "
                 "Such big ids are used internally for phantom nodes created when handling turn "
@@ -398,7 +185,7 @@ class _OSMGraphBuilder:
             )
 
         if node.id not in self.g.data:
-            self.g.data[node.id] = OSMGraphNode(
+            self.g.data[node.id] = GraphNode(
                 id=node.id,
                 position=node.position,
                 osm_id=node.id,
@@ -406,7 +193,7 @@ class _OSMGraphBuilder:
             self.unused_nodes.add(node.id)
 
     @add_feature.register
-    def add_way(self, way: osm_reader.Way) -> None:
+    def add_way(self, way: reader.Way) -> None:
         penalty = self._get_way_penalty(way)
         if penalty is None:
             return
@@ -419,9 +206,9 @@ class _OSMGraphBuilder:
         self._create_edges(nodes, penalty, forward, backward)
         self._update_state_after_adding_way(way.id, nodes)
 
-    def _get_way_penalty(self, way: osm_reader.Way) -> Optional[float]:
+    def _get_way_penalty(self, way: reader.Way) -> Optional[float]:
         """_get_way_penalty gets the penalty for using this way from the
-        graph's :py:class:`OSMProfile` and validates it.
+        graph's :py:class:`Profile` and validates it.
 
         Returns ``None`` if way is unroutable, a penalty ≥ 1, or raises ValueError.
         """
@@ -433,7 +220,7 @@ class _OSMGraphBuilder:
             )
         return penalty
 
-    def _get_way_nodes(self, way: osm_reader.Way) -> Optional[List[int]]:
+    def _get_way_nodes(self, way: reader.Way) -> Optional[List[int]]:
         """_get_way_nodes removes any unknown references from ``way.nodes``
         and emits warnings for them. Returns the filtered list, or ``None``
         if the way is too short to be usable after reference validation.
@@ -489,7 +276,7 @@ class _OSMGraphBuilder:
         self.way_nodes[way_id] = nodes
 
     @add_feature.register
-    def add_relation(self, relation: osm_reader.Relation) -> None:
+    def add_relation(self, relation: reader.Relation) -> None:
         if not self._is_applicable_turn_restriction(relation):
             return
 
@@ -500,7 +287,7 @@ class _OSMGraphBuilder:
         except _InvalidTurnRestriction as e:
             e.log()
 
-    def _is_applicable_turn_restriction(self, relation: osm_reader.Relation) -> bool:
+    def _is_applicable_turn_restriction(self, relation: reader.Relation) -> bool:
         """_is_applicable_turn_restriction returns ``True`` if the provided
         relation represents a turn restriction applicable to the current profile."""
         return (
@@ -509,7 +296,7 @@ class _OSMGraphBuilder:
             and not self.g.profile.is_exempted(relation.tags)
         )
 
-    def _is_mandatory_restriction(self, relation: osm_reader.Relation) -> bool:
+    def _is_mandatory_restriction(self, relation: reader.Relation) -> bool:
         """_is_mandatory_restriction returns ``True`` if the relation represents
         a mandatory turn restriction, ``False`` for prohibitory turn restriction,
         and raises :py:exc:`_InvalidTurnRestriction` otherwise.
@@ -528,7 +315,7 @@ class _OSMGraphBuilder:
             relation, f'unknown "restriction" tag value: {restriction!r}'
         )
 
-    def _get_restriction_nodes(self, r: osm_reader.Relation) -> List[int]:
+    def _get_restriction_nodes(self, r: reader.Relation) -> List[int]:
         """_get_turn_restriction_nodes return a sequence of nodes representing the route
         of a turn restriction. Only the last 2 members of the ``from`` member and
         first 2 member of the ``to`` member are taken into account.
@@ -541,15 +328,15 @@ class _OSMGraphBuilder:
 
     def _get_ordered_restriction_members(
         self,
-        r: osm_reader.Relation,
-    ) -> List[osm_reader.RelationMember]:
+        r: reader.Relation,
+    ) -> List[reader.RelationMember]:
         """_get_ordered_turn_restriction_members returns a list of turn restriction
         members in the order from-via-...-via-to. Ensures there is exactly one ``from`` member,
         exactly one ``to`` member and at least one ``via`` member. Any other members are ignored.
         """
-        from_: Optional[osm_reader.RelationMember] = None
-        to: Optional[osm_reader.RelationMember] = None
-        order: List[osm_reader.RelationMember] = []
+        from_: Optional[reader.RelationMember] = None
+        to: Optional[reader.RelationMember] = None
+        order: List[reader.RelationMember] = []
 
         for member in r.members:
             if member.role == "from":
@@ -578,8 +365,8 @@ class _OSMGraphBuilder:
 
     def _restriction_member_to_nodes(
         self,
-        r: osm_reader.Relation,
-        member: osm_reader.RelationMember,
+        r: reader.Relation,
+        member: reader.RelationMember,
     ) -> List[int]:
         """_restriction_member_to_nodes returns a list of nodes corresponding to a given
         turn restriction member.
@@ -609,7 +396,7 @@ class _OSMGraphBuilder:
 
     @staticmethod
     def _flatten_restriction_nodes(
-        relation: osm_reader.Relation,
+        relation: reader.Relation,
         members_nodes: List[List[int]],
     ) -> List[int]:
         """_flatten_restriction_nodes turns a list of turn restriction members' nodes
@@ -688,7 +475,7 @@ class _OSMGraphBuilder:
         # removed, except for the edges indicated by the restriction.
         # If a phantom node B' linked from A already exists, it must be reused.
 
-        change: Optional[_OSMGraphChange] = _OSMGraphChange(self.g)
+        change: Optional[_GraphChange] = _GraphChange(self.g)
         cloned_nodes = change.restriction_as_cloned_nodes(osm_nodes)
 
         if cloned_nodes is None and is_mandatory:
@@ -699,7 +486,7 @@ class _OSMGraphBuilder:
                 osm_nodes[0],
                 osm_nodes[1],
             )
-            change = _OSMGraphChange(self.g)
+            change = _GraphChange(self.g)
             change.edges_to_remove.add((osm_nodes[0], osm_nodes[1]))
 
         elif cloned_nodes is None:
@@ -725,12 +512,12 @@ class _OSMGraphBuilder:
             del self.g.data[node_id]
 
 
-class _OSMGraphChange:
-    """_OSMGraphChange represents a change to the :py:class:`OSMGraph` which needs to be applied
+class _GraphChange:
+    """_GraphChange represents a change to the :py:class:`Graph` which needs to be applied
     atomically/in one go.
     """
 
-    g: OSMGraph
+    g: Graph
 
     new_nodes: Dict[int, int]
     """Nodes to clone (including their edges), mapping from new id to old id."""
@@ -746,9 +533,9 @@ class _OSMGraphChange:
     """
 
     phantom_node_id_counter: int
-    """New value for :py:attr:`OSMGraph._phantom_node_id_counter`."""
+    """New value for :py:attr:`Graph._phantom_node_id_counter`."""
 
-    def __init__(self, g: OSMGraph) -> None:
+    def __init__(self, g: Graph) -> None:
         self.g = g
         self.new_nodes = {}
         self.edges_to_add = {}
@@ -809,7 +596,7 @@ class _OSMGraphChange:
     def _get_edge_cost(self, from_node_id: int, to_node_id: int) -> float:
         """_get_edge_cost returns the cost of an edge from ``from_node_id``
         to ``to_node_id``. While ``from_node_id`` might be an id of a cloned node,
-        ``to_node_id`` must exist in the :py:class:`OSMGraph`.
+        ``to_node_id`` must exist in the :py:class:`Graph`.
         """
         if overridden_cost := self.edges_to_add.get(from_node_id, {}).get(to_node_id):
             return overridden_cost
@@ -818,7 +605,7 @@ class _OSMGraphChange:
         return self.g.data[original_from_node_id].edges[to_node_id]
 
     def apply(self) -> None:
-        """apply applies all changes to the :py:class:`OSMGraph`."""
+        """apply applies all changes to the :py:class:`Graph`."""
         self.g._phantom_node_id_counter = self.phantom_node_id_counter  # pyright: ignore
         self._clone_nodes()
         self._remove_edges()
@@ -828,7 +615,7 @@ class _OSMGraphChange:
         """_clone_nodes applies changes prescribed by :py:attr:`new_nodes`."""
         for new_id, old_id in self.new_nodes.items():
             old_node = self.g.data[old_id]
-            self.g.data[new_id] = OSMGraphNode(
+            self.g.data[new_id] = GraphNode(
                 id=new_id,
                 position=old_node.position,
                 osm_id=old_node.osm_id,
@@ -870,11 +657,11 @@ class _OSMGraphChange:
 
 class _InvalidTurnRestriction(ValueError):
     """_InvalidTurnRestriction is raised when a turn restriction can't be applied
-    to an :py:class:`OSMGraph`. It is raised and caught by :py:class:`_OSMGraphBuilder`,
+    to an :py:class:`Graph`. It is raised and caught by :py:class:`_GraphBuilder`,
     which logs the issues and moves onto processing next features.
     """
 
-    def __init__(self, restriction: osm_reader.Relation, reason: str) -> None:
+    def __init__(self, restriction: reader.Relation, reason: str) -> None:
         super().__init__(f"invalid turn restriction {restriction.id}: {reason}")
         self.restriction = restriction
         self.reason = reason
