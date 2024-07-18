@@ -311,9 +311,7 @@ class _GraphBuilder:
         ):
             return kind == "only"
         # fmt: on
-        raise _InvalidTurnRestriction(
-            relation, f'unknown "restriction" tag value: {restriction!r}'
-        )
+        raise _InvalidTurnRestriction(relation, f'unknown "restriction" tag value: {restriction!r}')
 
     def _get_restriction_nodes(self, r: reader.Relation) -> List[int]:
         """_get_turn_restriction_nodes return a sequence of nodes representing the route
