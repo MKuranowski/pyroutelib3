@@ -1,76 +1,17 @@
 from pathlib import Path
 from unittest import TestCase
 
-from .osm_graph import OSM_PROFILE_CAR, OSMGraph, OSMHighwayProfile
+from .graph import Graph
+from .profile import PROFILE_CAR
 
 FIXTURES_DIR = Path(__file__).with_name("fixtures")
 
-TEST_HIGHWAY_PROFILE = OSMHighwayProfile(
-    "cat",
-    {"footway": 1.0, "path": 2.0},
-    ["access", "cat"],
-)
-
-
-class TestOSMHighwayProfile(TestCase):
-    def test_way_penalty(self) -> None:
-        self.assertEqual(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "footway"}), 1.0)
-        self.assertEqual(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "path"}), 2.0)
-        self.assertIsNone(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "motorway"}))
-        self.assertIsNone(
-            TEST_HIGHWAY_PROFILE.way_penalty({"highway": "motorway", "access": "no"})
-        )
-        self.assertEqual(
-            TEST_HIGHWAY_PROFILE.way_penalty(
-                {"highway": "footway", "access": "private", "cat": "yes"},
-            ),
-            1.0,
-        )
-
-    def test_way_direction(self) -> None:
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "footway"}),
-            (True, True),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "footway", "oneway": "yes"}),
-            (True, False),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "footway", "oneway": "-1"}),
-            (False, True),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "motorway_link"}),
-            (True, False),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "footway", "junction": "roundabout"}),
-            (True, False),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction({"highway": "motorway_link", "oneway": "no"}),
-            (True, True),
-        )
-        self.assertTupleEqual(
-            TEST_HIGHWAY_PROFILE.way_direction(
-                {"highway": "footway", "junction": "roundabout", "oneway": "-1"},
-            ),
-            (False, True),
-        )
-
-    def test_is_exempted(self) -> None:
-        self.assertFalse(TEST_HIGHWAY_PROFILE.is_exempted({}))
-        self.assertFalse(TEST_HIGHWAY_PROFILE.is_exempted({"except": "bus"}))
-        self.assertTrue(TEST_HIGHWAY_PROFILE.is_exempted({"except": "cat"}))
-        self.assertTrue(TEST_HIGHWAY_PROFILE.is_exempted({"except": "bus;cat"}))
-
 
 class TestOSMGraph(TestCase):
-    def assertEdge(self, g: OSMGraph, from_: int, to: int) -> None:
+    def assertEdge(self, g: Graph, from_: int, to: int) -> None:
         self.assertIn(to, g.data[from_].edges)
 
-    def assertNoEdge(self, g: OSMGraph, from_: int, to: int) -> None:
+    def assertNoEdge(self, g: Graph, from_: int, to: int) -> None:
         self.assertNotIn(to, g.data[from_].edges)
 
     def test_simple_graph(self) -> None:
@@ -85,7 +26,7 @@ class TestOSMGraph(TestCase):
         #   │
         #   1
         with (FIXTURES_DIR / "simple_graph.osm").open(mode="rb") as f:
-            g = OSMGraph.from_file(OSM_PROFILE_CAR, f)
+            g = Graph.from_file(PROFILE_CAR, f)
 
         # Check the loaded amount of nodes
         self.assertEqual(len(g.data), 14)

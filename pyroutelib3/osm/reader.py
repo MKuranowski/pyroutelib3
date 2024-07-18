@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from sys import intern
 from typing import IO, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
-from .protocols import Position
+from ..protocols import Position
 
 
 @dataclass
