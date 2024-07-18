@@ -14,9 +14,7 @@ class TestHighwayProfile(TestCase):
         self.assertEqual(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "footway"}), 1.0)
         self.assertEqual(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "path"}), 2.0)
         self.assertIsNone(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "motorway"}))
-        self.assertIsNone(
-            TEST_HIGHWAY_PROFILE.way_penalty({"highway": "motorway", "access": "no"})
-        )
+        self.assertIsNone(TEST_HIGHWAY_PROFILE.way_penalty({"highway": "motorway", "access": "no"}))
         self.assertEqual(
             TEST_HIGHWAY_PROFILE.way_penalty(
                 {"highway": "footway", "access": "private", "cat": "yes"},
