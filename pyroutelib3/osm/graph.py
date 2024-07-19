@@ -1,10 +1,9 @@
 import sys
 from dataclasses import dataclass, field
 from functools import singledispatchmethod
-from io import DEFAULT_BUFFER_SIZE
 from logging import getLogger
 from math import isfinite
-from typing import IO, Dict, Iterable, List, Literal, Optional, Set, Tuple
+from typing import IO, Dict, Iterable, List, Optional, Set, Tuple
 
 from typing_extensions import Self
 
@@ -129,11 +128,13 @@ class Graph:
         cls,
         profile: Profile,
         buf: IO[bytes],
-        format: Optional[Literal["xml", "bz2", "gz"]] = None,
-        chunk_size: int = DEFAULT_BUFFER_SIZE,
+        format: reader.FILE_FORMAT_T = reader.DEFAULT_FILE_FORMAT,
+        chunk_size: int = reader.DEFAULT_CHUNK_SIZE,
     ) -> Self:
         """Creates a :py:class:`Graph` based on the provided :py:class:`Profile` and features
-        from the provided OSM file.
+        from the provided possibly-compressed
+        `OSM XML <https://wiki.openstreetmap.org/wiki/OSM_XML>`_ or a
+        `OSM PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ file.
 
         ``format`` and ``chunk_size`` are passed through to :py:func:`osm.reader.read_features`.
         """

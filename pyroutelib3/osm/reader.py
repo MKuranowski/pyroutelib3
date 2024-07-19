@@ -1,13 +1,21 @@
 import bz2
 import gzip
 import io
+import lzma
+import struct
 import xml.sax
 import xml.sax.xmlreader
+import zlib
 from dataclasses import dataclass, field
 from sys import intern
-from typing import IO, Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import IO, Dict, Iterable, List, Literal, Optional, Sequence, Tuple, Union
 
 from ..protocols import Position
+from .pbf import fileformat_pb2, osmformat_pb2
+
+FILE_FORMAT_T = Optional[Literal["xml", "gz", "bz2", "pbf"]]
+DEFAULT_FILE_FORMAT = None
+DEFAULT_CHUNK_SIZE = io.DEFAULT_BUFFER_SIZE
 
 
 @dataclass
@@ -133,17 +141,227 @@ def read_features_from_xml(
         yield from handler.ready_features
 
 
+class PBFError(ValueError):
+    """Exception raised by :py:func:`read_features_from_pbf` on invalid
+    `OSM PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ encoding."""
+
+    pass
+
+
+@dataclass
+class _PBFParser:
+    buffer: IO[bytes]
+
+    granularity: int = 100
+    lat_offset: int = 0
+    lon_offset: int = 0
+    date_granularity: int = 1000
+    string_table: List[str] = field(default_factory=list)
+
+    def parse(self) -> Iterable[Feature]:
+        self._read_and_check_header_blob()
+        while blob := self._read_data_blob():
+            yield from self._parse_data_blob(blob)
+
+    def _read_blob_header(self, type: str) -> Optional[fileformat_pb2.BlobHeader]:
+        header_len_bytes = self.buffer.read(4)
+        if len(header_len_bytes) == 0:
+            return None
+        elif len(header_len_bytes) != 4:
+            raise PBFError("Unexpected EOF when trying to read BlobHeader length")
+
+        header_len: int = struct.unpack("!L", header_len_bytes)[0]
+        blob_header = fileformat_pb2.BlobHeader()
+        blob_header.ParseFromString(self.buffer.read(header_len))
+
+        if blob_header.type != type:
+            raise PBFError(
+                f"Expected a BlobHeader with type={type!r}, but got {blob_header.type!r}"
+            )
+
+        return blob_header
+
+    def _read_blob(self, blob_len: int) -> bytes:
+        blob = fileformat_pb2.Blob()
+        blob.ParseFromString(self.buffer.read(blob_len))
+
+        if blob.HasField("raw"):
+            return blob.raw
+        elif blob.HasField("zlib_data"):
+            return zlib.decompress(blob.zlib_data)
+        elif blob.HasField("lzma_data"):
+            return lzma.decompress(blob.lzma_data)
+        elif blob.HasField("OBSOLETE_bzip2_data"):
+            return bz2.decompress(blob.OBSOLETE_bzip2_data)
+        elif blob.HasField("lz4_data"):
+            raise PBFError("Blob uses unsupported compression, LZ4")
+        elif blob.HasField("zstd_data"):
+            raise PBFError("Blob uses unsupported compression, ZSTD")
+
+        raise PBFError("Blob has no data or uses an unsupported compression")
+
+    def _read_and_check_header_blob(self) -> None:
+        blob_header = self._read_blob_header("OSMHeader")
+        if blob_header is None:
+            raise PBFError("OSMHeader blob missing - is the file empty?")
+
+        header = osmformat_pb2.HeaderBlock()
+        header.ParseFromString(self._read_blob(blob_header.datasize))
+
+        unknown_required_features = set(header.required_features) - {"OsmSchema-V0.6", "DenseNodes"}
+        if unknown_required_features:
+            raise PBFError(
+                "HeaderBlock requests unsupported features: "
+                + ", ".join(sorted(unknown_required_features))
+            )
+
+    def _read_data_blob(self) -> Optional[bytes]:
+        blob_header = self._read_blob_header("OSMData")
+        if blob_header is None:
+            return None
+        return self._read_blob(blob_header.datasize)
+
+    def _parse_data_blob(self, blob: bytes) -> Iterable[Feature]:
+        primitive_block = osmformat_pb2.PrimitiveBlock()
+        primitive_block.ParseFromString(blob)
+
+        self.granularity = primitive_block.granularity
+        self.lat_offset = primitive_block.lat_offset
+        self.lon_offset = primitive_block.lon_offset
+        self.date_granularity = primitive_block.date_granularity
+        self.string_table = [s.decode("utf-8") for s in primitive_block.stringtable.s]
+
+        for primitive_group in primitive_block.primitivegroup:
+            yield from self._parse_primitive_group(primitive_group)
+
+    def _parse_primitive_group(
+        self,
+        primitive_group: osmformat_pb2.PrimitiveGroup,
+    ) -> Iterable[Feature]:
+        yield from map(self._parse_node, primitive_group.nodes)
+        if primitive_group.HasField("dense"):
+            yield from self._parse_dense_nodes(primitive_group.dense)
+        yield from map(self._parse_way, primitive_group.ways)
+        yield from map(self._parse_relation, primitive_group.relations)
+
+    def _parse_node(self, node: osmformat_pb2.Node) -> Node:
+        return Node(
+            id=node.id,
+            position=(self._parse_lat(node.lat), self._parse_lon(node.lon)),
+            tags=self._parse_tags(node.keys, node.vals),
+        )
+
+    def _parse_dense_nodes(self, dense_nodes: osmformat_pb2.DenseNodes) -> Iterable[Node]:
+        if dense_nodes.keys_vals:
+            for id, lat, lon, tags in zip(
+                self._decode_deltas(dense_nodes.id),
+                self._decode_deltas(dense_nodes.lat),
+                self._decode_deltas(dense_nodes.lon),
+                self._parse_dense_tags(dense_nodes.keys_vals),
+                # strict=True,  # TODO: Backport zip with strict=True
+            ):
+                yield Node(
+                    id=id,
+                    position=(self._parse_lat(lat), self._parse_lon(lon)),
+                    tags=tags,
+                )
+        else:
+            for id, lat, lon in zip(
+                self._decode_deltas(dense_nodes.id),
+                self._decode_deltas(dense_nodes.lat),
+                self._decode_deltas(dense_nodes.lon),
+                # strict=True  # TODO: Backport zip with strict=True,
+            ):
+                yield Node(
+                    id=id,
+                    position=(self._parse_lat(lat), self._parse_lon(lon)),
+                )
+
+    def _parse_way(self, way: osmformat_pb2.Way) -> Way:
+        return Way(
+            id=way.id,
+            nodes=list(self._decode_deltas(way.refs)),
+            tags=self._parse_tags(way.keys, way.vals),
+        )
+
+    def _parse_relation(self, relation: osmformat_pb2.Relation) -> Relation:
+        return Relation(
+            id=relation.id,
+            members=[
+                RelationMember(
+                    type=self._parse_member_type(member_type),
+                    ref=member_id,
+                    role=self.string_table[role_idx],
+                )
+                for role_idx, member_id, member_type in zip(
+                    relation.roles_sid,
+                    self._decode_deltas(relation.memids),
+                    relation.types,
+                    # strict=True,  # TODO: Backport zip with strict=True
+                )
+            ],
+            tags=self._parse_tags(relation.keys, relation.vals),
+        )
+
+    def _parse_tags(self, keys: Iterable[int], values: Iterable[int]) -> Dict[str, str]:
+        return {
+            self.string_table[k]: self.string_table[v]
+            for k, v in zip(keys, values)
+            # TODO: Backport zip with strict=True
+        }
+
+    def _parse_lat(self, lat: int) -> float:
+        return 1e-9 * (self.lat_offset + (self.granularity * lat))
+
+    def _parse_lon(self, lon: int) -> float:
+        return 1e-9 * (self.lon_offset + (self.granularity * lon))
+
+    def _decode_deltas(self, deltas: Iterable[int]) -> Iterable[int]:
+        value = 0
+        for delta in deltas:
+            value += delta
+            yield value
+
+    def _parse_dense_tags(self, string_indices: Sequence[int]) -> Iterable[Dict[str, str]]:
+        idx = 0
+        last = len(string_indices)
+        while idx < last:
+            tags: Dict[str, str] = {}
+            while string_indices[idx] != 0:
+                k_idx = string_indices[idx]
+                v_idx = string_indices[idx + 1]
+                tags[self.string_table[k_idx]] = self.string_table[v_idx]
+                idx += 2
+            yield tags
+            idx += 1
+
+    @staticmethod
+    def _parse_member_type(
+        t: osmformat_pb2.Relation.MemberType,
+    ) -> Literal["node", "way", "relation"]:
+        return ("node", "way", "relation")[t]
+
+
 def read_features(
     buf: IO[bytes],
-    format: Optional[Literal["xml", "gz", "bz2"]] = None,
-    chunk_size: int = io.DEFAULT_BUFFER_SIZE,
+    format: FILE_FORMAT_T = DEFAULT_FILE_FORMAT,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> Iterable[Feature]:
     """read_features_from_xml generates :py:obj:`Feature` instances from a possibly-compressed
-    `OSM XML <https://wiki.openstreetmap.org/wiki/OSM_XML>`_ file.
+    `OSM XML <https://wiki.openstreetmap.org/wiki/OSM_XML>`_ or a
+    `OSM PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ file.
 
-    If ``format`` is not provided, this function will check if ``buf.name`` endswith
-    ``.gz`` or ``.bz2`` to determine whether the provided buffer needs to be decompressed.
-    If the compression format cannot be determined, assumes that data will be uncompressed.
+    If ``format`` is not provided, this function will check if ``buf.name`` ends with
+    ``.gz`` or ``.bz2`` to determine whether the provided buffer needs to be decompressed,
+    or ``.pbf`` to use the protocol buffer deserializer. If the file format cannot be
+    determined, assumes that data will be in uncompressed XML format.
+
+    The ``chunk_size`` argument controls the size of XML data chunks read from the XML stream,
+    after decompression. Read calls to ``buf`` of ``chunk_size`` are only guaranteed for
+    non-compressed XML files. Size of the read calls for gzip or bz2 compressed XML files
+    depends on the inner workings of the ``gz`` and ``bz2`` modules, while for ``pbf`` files
+    read calls can range from 4 bytes to 32 MiB, depending on the size of the object
+    being deserialized.
     """
     if format == "gz" or (format is None and buf.name.endswith(".gz")):
         with gzip.open(buf, mode="rb") as decompressed_buffer:
@@ -151,21 +369,22 @@ def read_features(
     elif format == "bz2" or (format is None and buf.name.endswith(".bz2")):
         with bz2.open(buf, mode="rb") as decompressed_buffer:
             yield from read_features_from_xml(decompressed_buffer, chunk_size)
+    elif format == "pbf" or (format is None and buf.name.endswith(".pbf")):
+        yield from _PBFParser(buf).parse()
     else:
         yield from read_features_from_xml(buf, chunk_size)
 
 
 def collect_all_features(
     buf: IO[bytes],
-    format: Optional[Literal["xml", "gz", "bz2"]] = None,
-    chunk_size: int = io.DEFAULT_BUFFER_SIZE,
+    format: FILE_FORMAT_T = DEFAULT_FILE_FORMAT,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> Tuple[List[Node], List[Way], List[Relation]]:
     """collect_all_features reads all :py:obj:`Feature` instances from a possibly-compressed
-    `OSM XML <https://wiki.openstreetmap.org/wiki/OSM_XML>`_ file.
+    `OSM XML <https://wiki.openstreetmap.org/wiki/OSM_XML>`_ or a
+    `OSM PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ file.
 
-    If ``format`` is not provided, this function will check if ``buf.name`` endswith
-    ``.gz`` or ``.bz2`` to determine whether the provided buffer needs to be decompressed.
-    If the compression format cannot be determined, assumes that data will be uncompressed.
+    ``format`` and ``chunk_size`` are passed through to :py:func:`osm.reader.read_features`.
     """
 
     nodes: List[Node] = []
