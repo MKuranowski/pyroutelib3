@@ -1,1 +1,2 @@
 typing_extensions >=4, <5
+protobuf >=5.27, <6

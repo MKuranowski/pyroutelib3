@@ -99,3 +99,17 @@ class TestSimpleGraph(TestCase):
         self.assertListEqual(nodes, SIMPLE_GRAPH_NODES)
         self.assertListEqual(ways, SIMPLE_GRAPH_WAYS)
         self.assertListEqual(relations, SIMPLE_GRAPH_RELATIONS)
+
+    def test_pbf(self) -> None:
+        with (FIXTURES_DIR / "simple_graph.osm.pbf").open("rb") as f:
+            nodes, ways, relations = collect_all_features(f)
+
+        self.assertEqual(len(nodes), len(SIMPLE_GRAPH_NODES))
+        for got_node, expected_node in zip(nodes, SIMPLE_GRAPH_NODES):
+            self.assertEqual(got_node.id, expected_node.id)
+            self.assertAlmostEqual(got_node.position[0], expected_node.position[0], places=6)
+            self.assertAlmostEqual(got_node.position[1], expected_node.position[1], places=6)
+            self.assertDictEqual(got_node.tags, expected_node.tags)
+
+        self.assertListEqual(ways, SIMPLE_GRAPH_WAYS)
+        self.assertListEqual(relations, SIMPLE_GRAPH_RELATIONS)

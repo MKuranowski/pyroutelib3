@@ -17,7 +17,8 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "typing_extensions >=4, <5"
+    "typing_extensions >=4, <5",
+    "protobuf >=5.27, <6",
 ]
 
 [project.urls]
@@ -25,11 +26,13 @@ Home = "https://github.com/MKuranowski/pyroutelib3"
 
 [tool.black]
 line-length = 100
+exclude = "pyroutelib3/osm/pbf"
 
 [tool.isort]
 profile = "black"
 line_length = 100
+skip = ["pyroutelib3/osm/pbf"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-ignore = ["tests"]
+ignore = ["tests", "pyroutelib3/osm/pbf"]
