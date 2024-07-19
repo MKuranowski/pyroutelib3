@@ -1,3 +1,4 @@
+import gc
 import sys
 from dataclasses import dataclass, field
 from functools import singledispatchmethod
@@ -509,6 +510,7 @@ class _GraphBuilder:
         """cleanup removes unused nodes from the graph."""
         for node_id in self.unused_nodes:
             del self.g.data[node_id]
+        gc.collect()
 
 
 class _GraphChange:
