@@ -478,21 +478,11 @@ class _GraphBuilder:
         change: Optional[_GraphChange] = _GraphChange(self.g)
         cloned_nodes = change.restriction_as_cloned_nodes(osm_nodes)
 
-        if cloned_nodes is None and is_mandatory:
-            # Unsatisfiable mandatory restriction. Since the
+        if cloned_nodes is None:
             osm_logger.warning(
-                "turn restriction %d: mandates a non-existing route - removing %d->%d from graph",
+                "turn restriction %d: %s a non-existing route - skipping",
                 relation_id,
-                osm_nodes[0],
-                osm_nodes[1],
-            )
-            change = _GraphChange(self.g)
-            change.edges_to_remove.add((osm_nodes[0], osm_nodes[1]))
-
-        elif cloned_nodes is None:
-            osm_logger.warning(
-                "turn restriction %d: prohibits a non-existing route - skipping",
-                relation_id,
+                "mandates" if is_mandatory else "prohibits",
             )
             change = None
 
@@ -663,7 +653,7 @@ class _InvalidTurnRestriction(ValueError):
     """
 
     def __init__(self, restriction: reader.Relation, reason: str) -> None:
-        super().__init__(f"invalid turn restriction {restriction.id}: {reason}")
+        super().__init__(f"invalid turn restriction {restriction.id}: {reason} - skipping")
         self.restriction = restriction
         self.reason = reason
 
