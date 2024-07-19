@@ -1,7 +1,6 @@
 import gc
 import sys
 from dataclasses import dataclass, field
-from functools import singledispatchmethod
 from logging import getLogger
 from math import isfinite
 from typing import IO, Dict, Iterable, List, Optional, Set, Tuple
@@ -173,11 +172,14 @@ class _GraphBuilder:
         for feature in features:
             self.add_feature(feature)
 
-    @singledispatchmethod
     def add_feature(self, feature: reader.Feature) -> None:
-        raise RuntimeError(f"invalid feature type: {type(feature).__qualname__}")
+        if isinstance(feature, reader.Node):
+            self.add_node(feature)
+        elif isinstance(feature, reader.Way):
+            self.add_way(feature)
+        else:
+            self.add_relation(feature)
 
-    @add_feature.register
     def add_node(self, node: reader.Node) -> None:
         if node.id >= _MAX_NODE_ID:
             raise RuntimeError(
@@ -194,7 +196,6 @@ class _GraphBuilder:
             )
             self.unused_nodes.add(node.id)
 
-    @add_feature.register
     def add_way(self, way: reader.Way) -> None:
         penalty = self._get_way_penalty(way)
         if penalty is None:
@@ -277,7 +278,6 @@ class _GraphBuilder:
         self.unused_nodes.difference_update(nodes)
         self.way_nodes[way_id] = nodes
 
-    @add_feature.register
     def add_relation(self, relation: reader.Relation) -> None:
         if not self._is_applicable_turn_restriction(relation):
             return
