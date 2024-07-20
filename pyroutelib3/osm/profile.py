@@ -171,7 +171,7 @@ class HighwayProfile(Profile):
         if tags.get("type") != "restriction" or self.is_exempted(tags):
             return TurnRestriction.INAPPLICABLE
 
-        restriction = tags.get("restriction", "")
+        restriction = self.get_active_restriction_value(tags)
         kind, _, description = restriction.partition("_")
         # fmt: off
         if (
@@ -182,6 +182,14 @@ class HighwayProfile(Profile):
         # fmt: on
 
         return TurnRestriction.INAPPLICABLE
+
+    def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
+        active_value = ""
+        for mode in self.access:
+            key = f"restriction:{mode}" if mode != "access" else "restriction"
+            if value := tags.get(key):
+                active_value = value
+        return active_value
 
     def is_exempted(self, restriction_tags: Mapping[str, str]) -> bool:
         exempted = restriction_tags.get("except")
@@ -304,7 +312,7 @@ class FootProfile(NonMotorroadHighwayProfile):
     * (TODO) ``oneway`` tags are ignored, unless on ``highway=footway``, ``highway=path``,
         ``highway=steps`` or ``highway=platform``. On other ways,
         only ``oneway:foot`` is considered.
-    * (TODO) Only ``restriction:foot`` turn restrictions are considered.
+    * Only ``restriction:foot`` turn restrictions are considered.
     """
 
     def __init__(
@@ -343,3 +351,6 @@ class FootProfile(NonMotorroadHighwayProfile):
         ):
             return "platform"
         return highway
+
+    def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
+        return tags.get("restriction:foot", "")
