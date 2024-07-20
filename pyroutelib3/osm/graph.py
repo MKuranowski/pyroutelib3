@@ -182,7 +182,7 @@ class _GraphBuilder:
 
     def add_node(self, node: reader.Node) -> None:
         if node.id >= _MAX_NODE_ID:
-            raise RuntimeError(
+            raise ValueError(
                 f"OpenStreetMap node uses a very big ID ({node.id}). "
                 "Such big ids are used internally for phantom nodes created when handling turn "
                 "restrictions, and therefore not permitted, as it could create ID conflicts."
@@ -475,7 +475,7 @@ class _GraphBuilder:
         # removed, except for the edges indicated by the restriction.
         # If a phantom node B' linked from A already exists, it must be reused.
 
-        change: Optional[_GraphChange] = _GraphChange(self.g)
+        change: _GraphChange = _GraphChange(self.g)
         cloned_nodes = change.restriction_as_cloned_nodes(osm_nodes)
 
         if cloned_nodes is None:
@@ -484,7 +484,7 @@ class _GraphBuilder:
                 relation_id,
                 "mandates" if is_mandatory else "prohibits",
             )
-            change = None
+            return  # discarding the change
 
         elif is_mandatory:
             for a, b in pairwise(cloned_nodes[1:]):
@@ -493,8 +493,7 @@ class _GraphBuilder:
         else:
             change.edges_to_remove.add((cloned_nodes[-2], cloned_nodes[-1]))
 
-        if change:
-            change.apply()
+        change.apply()
 
     def cleanup(self) -> None:
         """cleanup removes unused nodes from the graph."""
@@ -536,7 +535,10 @@ class _GraphChange:
     def restriction_as_cloned_nodes(self, osm_nodes: List[int]) -> Optional[List[int]]:
         """Turns a A-B-C-D-E list of OSM nodes into a A-B'-C'-D'-E list by cloning
         all middle nodes. Cloned nodes (including E') may be re-used, if a B' node and A-B' edge
-        already exists. Returns ``None`` if osm_nodes represents a disjoined sequence.
+        already exists.
+
+        Returns ``None`` if osm_nodes represents a disjoined sequence, and in this case
+        the _GraphChange **must** be discarded, as it may contain garbage changes.
         """
         assert len(osm_nodes) >= 3
 
@@ -628,22 +630,15 @@ class _GraphChange:
         """ensure_only_edge ensure that the only node from ``from_node_id``
         is to node ``to_node_id``. Both ids might represent freshly-cloned nodes.
         """
-        if (clone_from_id := self.new_nodes.get(from_node_id)) is not None:
-            if from_node_id in self.edges_to_add:
-                self.edges_to_add[from_node_id] = {
-                    to: cost
-                    for to, cost in self.edges_to_add[from_node_id].items()
-                    if to == to_node_id
-                }
+        if from_node_id in self.edges_to_add:
+            self.edges_to_add[from_node_id] = {
+                to: cost for to, cost in self.edges_to_add[from_node_id].items() if to == to_node_id
+            }
 
-            for to in self.g.data[clone_from_id].edges:
-                if to != to_node_id:
-                    self.edges_to_remove.add((from_node_id, to))
-
-        else:
-            for to in self.g.data[from_node_id].edges:
-                if to != to_node_id:
-                    self.edges_to_remove.add((from_node_id, to))
+        original_from_node_id = self.new_nodes.get(from_node_id, from_node_id)
+        for to in self.g.data[original_from_node_id].edges:
+            if to != to_node_id:
+                self.edges_to_remove.add((from_node_id, to))
 
 
 class _InvalidTurnRestriction(ValueError):
