@@ -1,5 +1,24 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import ClassVar, Dict, List, Mapping, Optional, Protocol, Tuple
+
+
+class TurnRestriction(Enum):
+    """TurnRestriction indicates whether an `OSM relation <https://wiki.openstreetmap.org/wiki/Relation>`_
+    is an applicable `turn restriction <https://wiki.openstreetmap.org/wiki/Relation:restriction>`_.
+    Used as the return value of :py:meth:`Profile.is_turn_restriction`.
+    """
+
+    INAPPLICABLE = 0
+    """Not a turn restriction, or a restriction not applicable to the current :py:class:`Profile`."""
+
+    PROHIBITORY = 1
+    """Prohibitory (no_*) restriction, following the route of restriction is not allowed."""
+
+    MANDATORY = 2
+    """Mandatory (only_*) restriction, stepping from the "from" onto the "via" member
+    forces the use of the restriction's route.
+    """
 
 
 class Profile(Protocol):
@@ -25,16 +44,24 @@ class Profile(Protocol):
         """
         ...
 
-    def is_exempted(self, __restriction_tags: Mapping[str, str]) -> bool:
-        """is_exempted must determine whether the current Profile is exempted
-        from adhering to the provided `turn restriction <https://wiki.openstreetmap.org/wiki/Relation:restriction>`_
-        based on its tags.
+    def is_turn_restriction(self, __relation_tags: Mapping[str, str]) -> TurnRestriction:
+        """is_turn_restriction must determine whether the relation (given by its tags) is
+        an applicable `turn restriction <https://wiki.openstreetmap.org/wiki/Relation:restriction>`_.
+
+        If the relation is not a turn restriction, or is a turn restriction not applicable
+        to this Profile, must return :py:obj:`TurnRestriction.INAPPLICABLE`.
+
+        If following the route of the restriction is forbidden, must return
+        :py:obj:`TurnRestriction.PROHIBITORY`.
+
+        If following the route of the restriction is forced, must return
+        :py:obj:`TurnRestriction.MANDATORY`.
         """
         ...
 
 
 @dataclass
-class HighwayProfile:
+class HighwayProfile(Profile):
     """HighwayProfile implements :py:class:`Profile` for routing over highway=* ways."""
 
     name: str
@@ -114,6 +141,22 @@ class HighwayProfile:
             backward = True
 
         return forward, backward
+
+    def is_turn_restriction(self, tags: Mapping[str, str]) -> TurnRestriction:
+        if tags.get("type") != "restriction" or self.is_exempted(tags):
+            return TurnRestriction.INAPPLICABLE
+
+        restriction = tags.get("restriction", "")
+        kind, _, description = restriction.partition("_")
+        # fmt: off
+        if (
+            kind in ("no", "only")
+            and description in ("right_turn", "left_turn", "u_turn", "straight_on")
+        ):
+            return TurnRestriction.PROHIBITORY if kind == "no" else TurnRestriction.MANDATORY
+        # fmt: on
+
+        return TurnRestriction.INAPPLICABLE
 
     def is_exempted(self, restriction_tags: Mapping[str, str]) -> bool:
         exempted = restriction_tags.get("except")
