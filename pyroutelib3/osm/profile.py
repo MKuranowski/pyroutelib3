@@ -108,8 +108,6 @@ class HighwayProfile(Profile):
         "secondary_link": "secondary",
         "tertiary_link": "tertiary",
         "minor": "unclassified",
-        "pedestrian": "footway",
-        "platform": "footway",
     }
 
     def way_penalty(self, way_tags: Mapping[str, str]) -> Optional[float]:
@@ -189,83 +187,140 @@ class HighwayProfile(Profile):
         return any(exempted_type in self.access for exempted_type in exempted.split(";"))
 
 
-PROFILE_CAR = HighwayProfile(
-    name="motorcar",
-    penalties={
-        "motorway": 1.0,
-        "trunk": 1.0,
-        "primary": 5.0,
-        "secondary": 6.5,
-        "tertiary": 10.0,
-        "unclassified": 10.0,
-        "residential": 15.0,
-        "living_street": 20.0,
-        "track": 20.0,
-        "service": 20.0,
-    },
-    access=["access", "vehicle", "motor_vehicle", "motorcar"],
-)
-"""PROFILE_CAR is a :py:class:`HighwayProfile` which can be used for car routing."""
+class CarProfile(HighwayProfile):
+    """CarProfile is a :py:class:`HighwayProfile` with default parameters which can be used for
+    car routing."""
 
-PROFILE_BUS = HighwayProfile(
-    name="bus",
-    penalties={
-        "motorway": 1.0,
-        "trunk": 1.0,
-        "primary": 1.1,
-        "secondary": 1.15,
-        "tertiary": 1.15,
-        "unclassified": 1.5,
-        "residential": 2.5,
-        "living_street": 2.5,
-        "track": 5.0,
-        "service": 5.0,
-    },
-    access=["access", "vehicle", "motor_vehicle", "psv", "bus", "routing:ztm"],
-)
-"""PROFILE_BUS is a :py:class:`HighwayProfile` which can be used for bus routing."""
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        penalties: Optional[Dict[str, float]] = None,
+        access: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__(
+            name=name or "motorcar",
+            penalties=penalties
+            or {
+                "motorway": 1.0,
+                "trunk": 1.0,
+                "primary": 5.0,
+                "secondary": 6.5,
+                "tertiary": 10.0,
+                "unclassified": 10.0,
+                "residential": 15.0,
+                "living_street": 20.0,
+                "track": 20.0,
+                "service": 20.0,
+            },
+            access=access or ["access", "vehicle", "motor_vehicle", "motorcar"],
+        )
 
 
-PROFILE_CYCLE = HighwayProfile(
-    name="bicycle",
-    penalties={
-        "trunk": 50.0,
-        "primary": 10.0,
-        "secondary": 3.0,
-        "tertiary": 2.5,
-        "unclassified": 2.5,
-        "cycleway": 1.0,
-        "residential": 1.0,
-        "living_street": 1.5,
-        "track": 2.0,
-        "service": 2.0,
-        "bridleway": 3.0,
-        "footway": 3.0,
-        "steps": 5.0,
-        "path": 2.0,
-    },
-    access=["access", "vehicle", "bicycle"],
-)
-"""PROFILE_CYCLE is a :py:class:`HighwayProfile` which can be used for bicycle routing."""
+class BusProfile(HighwayProfile):
+    """BusProfile is a :py:class:`HighwayProfile` with default parameters which can be used for
+    bus routing.
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        penalties: Optional[Dict[str, float]] = None,
+        access: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__(
+            name=name or "bus",
+            penalties=penalties
+            or {
+                "motorway": 1.0,
+                "trunk": 1.0,
+                "primary": 1.1,
+                "secondary": 1.15,
+                "tertiary": 1.15,
+                "unclassified": 1.5,
+                "residential": 2.5,
+                "living_street": 2.5,
+                "track": 5.0,
+                "service": 5.0,
+            },
+            access=access or ["access", "vehicle", "motor_vehicle", "psv", "bus", "routing:ztm"],
+        )
 
 
-PROFILE_FOOT = HighwayProfile(
-    name="foot",
-    penalties={
-        "trunk": 4.0,
-        "primary": 2.0,
-        "secondary": 1.3,
-        "tertiary": 1.2,
-        "unclassified": 1.2,
-        "residential": 1.2,
-        "living_street": 1.2,
-        "track": 1.2,
-        "service": 1.2,
-        "bridleway": 1.2,
-        "footway": 1.0,
-        "path": 1.0,
-        "steps": 1.15,
-    },
-    access=["access", "foot"],
-)
-"""PROFILE_FOOT is a :py:class:`HighwayProfile` which can be used for on-foot routing."""
+class NonMotorroadHighwayProfile(HighwayProfile):
+    """NonMotorroadHighwayProfile is a base class for profiles over highway=* ways,
+    for which motorroad=yes implies no access.
+    """
+
+    def is_allowed(self, way_tags: Mapping[str, str]) -> bool:
+        if way_tags.get("motorroad") == "yes":
+            return False
+        return super().is_allowed(way_tags)
+
+
+class BicycleProfile(NonMotorroadHighwayProfile):
+    """BicycleProfile is a :py:class:`NonMotorroadHighwayProfile` with default parameters
+    which can be used for bicycle routing.
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        penalties: Optional[Dict[str, float]] = None,
+        access: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__(
+            name=name or "bicycle",
+            penalties=penalties
+            or {
+                "trunk": 50.0,
+                "primary": 10.0,
+                "secondary": 3.0,
+                "tertiary": 2.5,
+                "unclassified": 2.5,
+                "cycleway": 1.0,
+                "residential": 1.0,
+                "living_street": 1.5,
+                "track": 2.0,
+                "service": 2.0,
+                "bridleway": 3.0,
+                "footway": 3.0,
+                "steps": 5.0,
+                "path": 2.0,
+            },
+            access=access or ["access", "vehicle", "bicycle"],
+        )
+
+
+class FootProfile(NonMotorroadHighwayProfile):
+    """FootProfile is a :py:class:`NonMotorroadHighwayProfile` with default parameters
+    which can be used for on-foot routing.
+    """
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        penalties: Optional[Dict[str, float]] = None,
+        access: Optional[List[str]] = None,
+    ) -> None:
+        super().__init__(
+            name=name or "foot",
+            penalties=penalties
+            or {
+                "trunk": 4.0,
+                "primary": 2.0,
+                "secondary": 1.3,
+                "tertiary": 1.2,
+                "unclassified": 1.2,
+                "residential": 1.2,
+                "living_street": 1.2,
+                "track": 1.2,
+                "service": 1.2,
+                "bridleway": 1.2,
+                "footway": 1.05,
+                "path": 1.05,
+                "steps": 1.15,
+                "pedestrian": 1.0,
+                "platform": 1.1,
+            },
+            access=access or ["access", "foot"],
+        )
