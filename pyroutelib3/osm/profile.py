@@ -154,7 +154,7 @@ class HighwayProfile(Profile):
             backward = False
 
         # Check against the oneway tag
-        oneway = way_tags.get("oneway")
+        oneway = self.get_active_oneway_value(way_tags)
         if oneway in ("yes", "true", "1"):
             forward = True
             backward = False
@@ -166,6 +166,15 @@ class HighwayProfile(Profile):
             backward = True
 
         return forward, backward
+
+    def get_active_oneway_value(self, tags: Mapping[str, str]) -> str:
+        active_value = tags.get("oneway", "")
+        for mode in self.access:
+            if mode == "access":
+                continue
+            if value := tags.get(f"restriction:{mode}"):
+                active_value = value
+        return active_value
 
     def is_turn_restriction(self, tags: Mapping[str, str]) -> TurnRestriction:
         if tags.get("type") != "restriction" or self.is_exempted(tags):
@@ -184,10 +193,11 @@ class HighwayProfile(Profile):
         return TurnRestriction.INAPPLICABLE
 
     def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
-        active_value = ""
+        active_value = tags.get("restriction", "")
         for mode in self.access:
-            key = f"restriction:{mode}" if mode != "access" else "restriction"
-            if value := tags.get(key):
+            if mode == "access":
+                continue
+            if value := tags.get(f"restriction:{mode}"):
                 active_value = value
         return active_value
 
@@ -309,9 +319,8 @@ class FootProfile(NonMotorroadHighwayProfile):
     FootProfile treats several tags differently to :py:class:`HighwayProfile`:
 
     * ``public_transport=platform`` and ``railway=platform`` are treated as-if ``highway=platform``
-    * (TODO) ``oneway`` tags are ignored, unless on ``highway=footway``, ``highway=path``,
-        ``highway=steps`` or ``highway=platform``. On other ways,
-        only ``oneway:foot`` is considered.
+    * ``oneway`` tags are ignored, unless on ``highway=footway``, ``highway=path``,
+        ``highway=steps`` or ``highway=platform``. On other ways, only ``oneway:foot`` is used.
     * Only ``restriction:foot`` turn restrictions are considered.
     """
 
@@ -351,6 +360,14 @@ class FootProfile(NonMotorroadHighwayProfile):
         ):
             return "platform"
         return highway
+
+    def get_active_oneway_value(self, tags: Mapping[str, str]) -> str:
+        active_value = ""
+        if self.get_active_highway_value(tags) in ("footway", "path", "steps", "platform"):
+            active_value = tags.get("oneway", "")
+        if value := tags.get("oneway:foot", ""):
+            active_value = value
+        return active_value
 
     def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
         return tags.get("restriction:foot", "")
