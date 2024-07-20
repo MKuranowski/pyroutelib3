@@ -60,6 +60,30 @@ class Profile(Protocol):
         ...
 
 
+class SkeletonProfile(Profile):
+    """SkeletonProfile implements :py:class:`Profile` for routing over every way in OSM data,
+    regardless of used tags. This profile is meant for holding graphs in OSM XML/OSM PBF
+    formats, without following OpenStreetMap mapping conventions. All relations (and thus
+    turn restrictions) are ignored.
+
+    The only introspected tag is ``oneway``, which may be set to ``yes`` or ``-1``.
+    """
+
+    def way_penalty(self, way_tags: Mapping[str, str]) -> Optional[float]:
+        return 1.0
+
+    def way_direction(self, way_tags: Mapping[str, str]) -> Tuple[bool, bool]:
+        oneway = way_tags.get("oneway")
+        if oneway == "yes":
+            return True, False
+        elif oneway == "-1":
+            return False, True
+        return True, True
+
+    def is_turn_restriction(self, relation_tags: Mapping[str, str]) -> TurnRestriction:
+        return TurnRestriction.INAPPLICABLE
+
+
 @dataclass
 class HighwayProfile(Profile):
     """HighwayProfile implements :py:class:`Profile` for routing over highway=* ways."""
