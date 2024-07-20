@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from . import reader
 from .graph import Graph, GraphNode, _GraphBuilder, _GraphChange
-from .profile import PROFILE_CAR
+from .profile import CarProfile
 
 FIXTURES_DIR = Path(__file__).with_name("fixtures")
 
@@ -31,7 +31,7 @@ class TestGraph(TestCaseWithEdges):
         #   │
         #   1
         with (FIXTURES_DIR / "simple_graph.osm").open(mode="rb") as f:
-            g = Graph.from_file(PROFILE_CAR, f)
+            g = Graph.from_file(CarProfile(), f)
 
         # Check the loaded amount of nodes
         self.assertEqual(len(g.data), 14)
@@ -88,7 +88,7 @@ class TestGraph(TestCaseWithEdges):
 
 class TestGraphBuilder(TestCaseWithEdges):
     def test_add_node(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
         b.add_node(reader.Node(1, (0.0, 0.0)))
 
@@ -96,7 +96,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         self.assertIn(1, b.unused_nodes)
 
     def test_add_node_duplicate(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g.data[1] = GraphNode(id=1, position=(0.0, 0.0), osm_id=1)
         b = _GraphBuilder(g)
         b.add_node(reader.Node(1, (0.1, 0.0)))
@@ -105,14 +105,14 @@ class TestGraphBuilder(TestCaseWithEdges):
         self.assertNotIn(1, b.unused_nodes)
 
     def test_add_node_big_osm_id(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
 
         with self.assertRaises(ValueError):
             b.add_node(reader.Node(id=0x0010_0000_0000_0000, position=(0.0, 0.0)))
 
     def test_add_way(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
         b.add_features(
             [
@@ -134,7 +134,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         self.assertListEqual(b.way_nodes[10], [1, 2, 3])
 
     def test_add_way_one_way(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
         b.add_features(
             [
@@ -156,7 +156,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         self.assertListEqual(b.way_nodes[10], [1, 2, 3])
 
     def test_add_way_not_routable(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
         b.add_features(
             [
@@ -183,7 +183,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # 1───2───3
         # no_left_turn: 1->2->4
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -229,7 +229,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # 1───2───3
         # no_left_turn: 1->2->4
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -273,7 +273,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # no_left_turn: 1->2->4
         # no_right_turn: 4->2->1
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -337,7 +337,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # no_left_turn: 1->2->4
         # no_right_turn: 1->2->5
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -400,7 +400,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # 1───2───3
         # only_straight_on: 1->2->3
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -446,7 +446,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # 1───2───3
         # only_left_turn: 1->2->4
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -490,7 +490,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # only_straight_on: 1->2->3
         # only_left_turn: 4->2->3
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -552,7 +552,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # only_straight_on: 1->2->3 (applied)
         # only_left_turn: 1->2->4 (ignored)
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -608,7 +608,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # no_left_turn: 1->2->4
         # only_straight_on: 1->2->3
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -664,7 +664,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         # no_left_turn: 1->2->3->6
         # only_straight_on: 1->2->3
 
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         g._phantom_node_id_counter = 100
 
         b = _GraphBuilder(g)
@@ -730,7 +730,7 @@ class TestGraphBuilder(TestCaseWithEdges):
         self.assertEdge(g, 6, 3)
 
     def test_cleanup(self) -> None:
-        g = Graph(PROFILE_CAR)
+        g = Graph(CarProfile())
         b = _GraphBuilder(g)
         b.add_features(
             [
@@ -758,7 +758,7 @@ class TestGraphChange(TestCase):
         #       └─────5─────┘
         #        (100) (100)
         self.g = Graph(
-            profile=PROFILE_CAR,
+            profile=CarProfile(),
             data={
                 1: GraphNode(id=1, position=(0.0, 0.0), osm_id=1, edges={2: 200.0}),
                 2: GraphNode(
