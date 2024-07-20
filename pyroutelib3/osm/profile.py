@@ -112,8 +112,7 @@ class HighwayProfile(Profile):
 
     def way_penalty(self, way_tags: Mapping[str, str]) -> Optional[float]:
         # Get the penalty of the highway tag
-        highway = way_tags.get("highway", "")
-        highway = self.EQUIVALENT_TAGS.get(highway, highway)
+        highway = self.get_active_highway_value(way_tags)
         penalty = self.penalties.get(highway)
         if penalty is None:
             return None
@@ -123,6 +122,10 @@ class HighwayProfile(Profile):
             return None
 
         return penalty
+
+    def get_active_highway_value(self, tags: Mapping[str, str]) -> str:
+        highway = tags.get("highway", "")
+        return self.EQUIVALENT_TAGS.get(highway, highway)
 
     def is_allowed(self, way_tags: Mapping[str, str]) -> bool:
         allowed = True
@@ -294,6 +297,14 @@ class BicycleProfile(NonMotorroadHighwayProfile):
 class FootProfile(NonMotorroadHighwayProfile):
     """FootProfile is a :py:class:`NonMotorroadHighwayProfile` with default parameters
     which can be used for on-foot routing.
+
+    FootProfile treats several tags differently to :py:class:`HighwayProfile`:
+
+    * ``public_transport=platform`` and ``railway=platform`` are treated as-if ``highway=platform``
+    * (TODO) ``oneway`` tags are ignored, unless on ``highway=footway``, ``highway=path``,
+        ``highway=steps`` or ``highway=platform``. On other ways,
+        only ``oneway:foot`` is considered.
+    * (TODO) Only ``restriction:foot`` turn restrictions are considered.
     """
 
     def __init__(
@@ -324,3 +335,11 @@ class FootProfile(NonMotorroadHighwayProfile):
             },
             access=access or ["access", "foot"],
         )
+
+    def get_active_highway_value(self, tags: Mapping[str, str]) -> str:
+        highway = super().get_active_highway_value(tags)
+        if not highway and (
+            tags.get("public_transport") == "platform" or tags.get("railway") == "platform"
+        ):
+            return "platform"
+        return highway
