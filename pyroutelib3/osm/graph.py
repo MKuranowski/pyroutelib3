@@ -10,7 +10,7 @@ from typing_extensions import Self
 from ..distance import haversine_earth_distance
 from ..protocols import Position
 from . import reader
-from .profile import Profile
+from .profile import Profile, TurnRestriction
 
 osm_logger = getLogger("pyroutelib3.osm")
 
@@ -279,41 +279,16 @@ class _GraphBuilder:
         self.way_nodes[way_id] = nodes
 
     def add_relation(self, relation: reader.Relation) -> None:
-        if not self._is_applicable_turn_restriction(relation):
+        restriction = self.g.profile.is_turn_restriction(relation.tags)
+        if restriction is TurnRestriction.INAPPLICABLE:
             return
 
         try:
-            is_mandatory = self._is_mandatory_restriction(relation)
+            is_mandatory = restriction is TurnRestriction.MANDATORY
             nodes = self._get_restriction_nodes(relation)
             self._store_restriction(relation.id, nodes, is_mandatory)
         except _InvalidTurnRestriction as e:
             e.log()
-
-    def _is_applicable_turn_restriction(self, relation: reader.Relation) -> bool:
-        """_is_applicable_turn_restriction returns ``True`` if the provided
-        relation represents a turn restriction applicable to the current profile."""
-        return (
-            relation.tags.get("type") == "restriction"
-            and relation.tags.get("restriction", "").startswith(("no_", "only_"))
-            and not self.g.profile.is_exempted(relation.tags)
-        )
-
-    def _is_mandatory_restriction(self, relation: reader.Relation) -> bool:
-        """_is_mandatory_restriction returns ``True`` if the relation represents
-        a mandatory turn restriction, ``False`` for prohibitory turn restriction,
-        and raises :py:exc:`_InvalidTurnRestriction` otherwise.
-        """
-
-        restriction = relation.tags.get("restriction", "")
-        kind, _, description = restriction.partition("_")
-        # fmt: off
-        if (
-            kind in ("no", "only")
-            and description in ("right_turn", "left_turn", "u_turn", "straight_on")
-        ):
-            return kind == "only"
-        # fmt: on
-        raise _InvalidTurnRestriction(relation, f'unknown "restriction" tag value: {restriction!r}')
 
     def _get_restriction_nodes(self, r: reader.Relation) -> List[int]:
         """_get_turn_restriction_nodes return a sequence of nodes representing the route
