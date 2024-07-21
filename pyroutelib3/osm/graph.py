@@ -42,7 +42,6 @@ class GraphNode:
     id: int
     position: Position
     osm_id: int
-    edges: Dict[int, float] = field(default_factory=dict)
 
     @property
     def external_id(self) -> int:
@@ -53,7 +52,8 @@ class Graph:
     """Graph implements :py:class:`GraphLike` over OpenStreetMap data."""
 
     profile: Profile
-    data: Dict[int, GraphNode]
+    nodes: Dict[int, GraphNode]
+    edges: Dict[int, Dict[int, float]]
 
     _phantom_node_id_counter: int
     """_phantom_node_id_counter is a counter used for generating IDs for phantom nodes
@@ -61,20 +61,17 @@ class Graph:
     :py:class:`_GraphChange`.
     """
 
-    def __init__(
-        self,
-        profile: Profile,
-        data: Optional[Dict[int, GraphNode]] = None,
-    ) -> None:
+    def __init__(self, profile: Profile) -> None:
         self.profile = profile
-        self.data = data or {}
+        self.nodes = {}
+        self.edges = {}
         self._phantom_node_id_counter = _MAX_NODE_ID
 
     def get_node(self, id: int) -> GraphNode:
-        return self.data[id]
+        return self.nodes[id]
 
     def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
-        return self.data[id].edges.items()
+        return self.edges[id].items()
 
     def find_nearest_node(self, position: Position) -> GraphNode:
         """find_nearest_node finds the closest node to the provided :py:obj:`Position`.
@@ -86,7 +83,7 @@ class Graph:
         """
 
         return min(
-            (nd for nd in self.data.values() if nd.id == nd.osm_id),
+            (nd for nd in self.nodes.values() if nd.id == nd.osm_id),
             key=lambda nd: haversine_earth_distance(position, nd.position),
         )
 
@@ -188,8 +185,8 @@ class _GraphBuilder:
                 "restrictions, and therefore not permitted, as it could create ID conflicts."
             )
 
-        if node.id not in self.g.data:
-            self.g.data[node.id] = GraphNode(
+        if node.id not in self.g.nodes:
+            self.g.nodes[node.id] = GraphNode(
                 id=node.id,
                 position=node.position,
                 osm_id=node.id,
@@ -232,7 +229,7 @@ class _GraphBuilder:
         # Remove references to unknown nodes
         nodes: List[int] = []
         for node in way.nodes:
-            if node in self.g.data:
+            if node in self.g.nodes:
                 nodes.append(node)
             else:
                 osm_logger.warning(
@@ -263,14 +260,14 @@ class _GraphBuilder:
         The cost of each edge is the :py:func:`haversine_earth_distance` multiplied by ``penalty``.
         """
         for left_id, right_id in pairwise(nodes):
-            left = self.g.data[left_id]
-            right = self.g.data[right_id]
+            left = self.g.nodes[left_id]
+            right = self.g.nodes[right_id]
             weight = penalty * haversine_earth_distance(left.position, right.position)
 
             if forward:
-                left.edges[right_id] = weight
+                self.g.edges.setdefault(left_id, {})[right_id] = weight
             if backward:
-                right.edges[left_id] = weight
+                self.g.edges.setdefault(right_id, {})[left_id] = weight
 
     def _update_state_after_adding_way(self, way_id: int, nodes: List[int]) -> None:
         """_update_state_after_adding_way updates builder attributes after
@@ -353,7 +350,7 @@ class _GraphBuilder:
         Any invalid members cause :py:exc:`_InvalidTurnRestriction` to be raised.
         """
         if member.type == "node" and member.role == "via":
-            if member.ref not in self.g.data:
+            if member.ref not in self.g.nodes:
                 raise _InvalidTurnRestriction(r, f"reference to unknown node: {member.ref}")
             return [member.ref]
 
@@ -473,7 +470,7 @@ class _GraphBuilder:
     def cleanup(self) -> None:
         """cleanup removes unused nodes from the graph."""
         for node_id in self.unused_nodes:
-            del self.g.data[node_id]
+            del self.g.nodes[node_id]
         gc.collect()
 
 
@@ -546,8 +543,8 @@ class _GraphChange:
         with an edge going in from a node identified by ``from_node_id``.
         """
         original_from_node_id = self.new_nodes.get(from_node_id, from_node_id)
-        for candidate_to_node_id in self.g.data[original_from_node_id].edges:
-            candidate_to_osm_id = self.g.data[candidate_to_node_id].osm_id
+        for candidate_to_node_id in self.g.edges[original_from_node_id]:
+            candidate_to_osm_id = self.g.nodes[candidate_to_node_id].osm_id
             if candidate_to_osm_id == to_osm_id:
                 return candidate_to_node_id
         return None
@@ -555,7 +552,7 @@ class _GraphChange:
     def _make_node_clone(self, original_node_id: int) -> int:
         """_make_node_clone records that ``original_node_id`` should be cloned,
         and returns the ID of the cloned node. Edges are also cloned."""
-        assert original_node_id in self.g.data
+        assert original_node_id in self.g.nodes
         self.phantom_node_id_counter += 1
         cloned_node_id = self.phantom_node_id_counter
         self.new_nodes[cloned_node_id] = original_node_id
@@ -570,7 +567,7 @@ class _GraphChange:
             return overridden_cost
 
         original_from_node_id = self.new_nodes.get(from_node_id, from_node_id)
-        return self.g.data[original_from_node_id].edges[to_node_id]
+        return self.g.edges[original_from_node_id][to_node_id]
 
     def apply(self) -> None:
         """apply applies all changes to the :py:class:`Graph`."""
@@ -582,24 +579,24 @@ class _GraphChange:
     def _clone_nodes(self) -> None:
         """_clone_nodes applies changes prescribed by :py:attr:`new_nodes`."""
         for new_id, old_id in self.new_nodes.items():
-            old_node = self.g.data[old_id]
-            self.g.data[new_id] = GraphNode(
+            old_node = self.g.nodes[old_id]
+            self.g.nodes[new_id] = GraphNode(
                 id=new_id,
                 position=old_node.position,
                 osm_id=old_node.osm_id,
-                edges=old_node.edges.copy(),
             )
+            self.g.edges[new_id] = self.g.edges[old_id].copy()
 
     def _remove_edges(self) -> None:
         """_remove_edges applies changes prescribed by :py:attr:`edges_to_remove`."""
         for from_id, to_id in self.edges_to_remove:
-            _ = self.g.data[from_id].edges.pop(to_id, None)
+            _ = self.g.edges[from_id].pop(to_id, None)
 
     def _add_edges(self) -> None:
         """_add_edges applies changes prescribed by :py:attr:`edges_to_add`."""
         for from_id, edges in self.edges_to_add.items():
             for to_id, cost in edges.items():
-                self.g.data[from_id].edges[to_id] = cost
+                self.g.edges.setdefault(from_id, {})[to_id] = cost
 
     def ensure_only_edge(self, from_node_id: int, to_node_id: int) -> None:
         """ensure_only_edge ensure that the only node from ``from_node_id``
@@ -611,7 +608,7 @@ class _GraphChange:
             }
 
         original_from_node_id = self.new_nodes.get(from_node_id, from_node_id)
-        for to in self.g.data[original_from_node_id].edges:
+        for to in self.g.edges[original_from_node_id]:
             if to != to_node_id:
                 self.edges_to_remove.add((from_node_id, to))
 
