@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from .distance import euclidean_distance
 from .protocols import GraphLike, Position
-from .router import find_route, find_route_without_turn_around
+from .router import StepLimitExceeded, find_route, find_route_without_turn_around
 
 
 @dataclass
@@ -99,6 +99,31 @@ class TestFindRoute(TestCase):
             [1, 2, 3, 6, 9, 8],
         )
 
+    def test_step_limit(self) -> None:
+        #  (20)  (20)  (20)
+        # 1─────2─────3─────4
+        #       └─────5─────┘
+        #        (10)   (10)
+        g = Graph(
+            nodes={
+                1: Node(1, (1, 1)),
+                2: Node(2, (2, 1)),
+                3: Node(3, (3, 1)),
+                4: Node(4, (4, 1)),
+                5: Node(5, (3, 0)),
+            },
+            edges={
+                1: {2: 20},
+                2: {1: 20, 3: 20, 5: 10},
+                3: {2: 20, 4: 20},
+                4: {3: 20, 5: 10},
+                5: {2: 10, 4: 10},
+            },
+        )
+
+        with self.assertRaises(StepLimitExceeded):
+            find_route(g, 1, 4, distance=euclidean_distance, step_limit=2)
+
 
 class TestFindRouteWithoutTurnAround(TestCase):
     def test(self) -> None:
@@ -140,3 +165,28 @@ class TestFindRouteWithoutTurnAround(TestCase):
             find_route_without_turn_around(g, 1, 3, distance=euclidean_distance),
             [1, 20, 4, 5, 3],
         )
+
+    def test_step_limit(self) -> None:
+        #  (20)  (20)  (20)
+        # 1─────2─────3─────4
+        #       └─────5─────┘
+        #        (10)   (10)
+        g = Graph(
+            nodes={
+                1: Node(1, (1, 1)),
+                2: Node(2, (2, 1)),
+                3: Node(3, (3, 1)),
+                4: Node(4, (4, 1)),
+                5: Node(5, (3, 0)),
+            },
+            edges={
+                1: {2: 20},
+                2: {1: 20, 3: 20, 5: 10},
+                3: {2: 20, 4: 20},
+                4: {3: 20, 5: 10},
+                5: {2: 10, 4: 10},
+            },
+        )
+
+        with self.assertRaises(StepLimitExceeded):
+            find_route_without_turn_around(g, 1, 4, distance=euclidean_distance, step_limit=2)

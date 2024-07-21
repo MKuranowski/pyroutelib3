@@ -6,6 +6,10 @@ from typing import Dict, List, Mapping, Optional
 from .distance import haversine_earth_distance
 from .protocols import DistanceFunction, ExternalNodeLike, GraphLike, NodeLike
 
+DEFAULT_STEP_LIMIT = 1_000_000
+"""Default number of allowed node expansions in :py:func:`find_route` and
+:py:func:`find_route_without_turn_around`."""
+
 
 @dataclass(frozen=True, order=True)
 class _AStarQueueItem:
@@ -21,11 +25,24 @@ class _NodeAndBefore:
     external_id_before: Optional[int] = None
 
 
+class StepLimitExceeded(ValueError):
+    """Exception used when a route search has exceeded its limit of steps.
+    Either the nodes are really far apart, or no route exists.
+
+    Concluding that no route exists requires traversing the whole graph,
+    which on real OpenStreetMap data may require going through the whole planet,
+    hence this exception.
+    """
+
+    pass
+
+
 def find_route(
     g: GraphLike[NodeLike],
     start: int,
     end: int,
     distance: DistanceFunction = haversine_earth_distance,
+    step_limit: Optional[int] = DEFAULT_STEP_LIMIT,
 ) -> List[int]:
     """find_route uses the `A* algorithm <https://en.wikipedia.org/wiki/A*_search_algorithm>`_
     to find the shortest route between two nodes in the provided graph.
@@ -35,11 +52,18 @@ def find_route(
     For graphs with turn restrictions, use :py:func:`find_route_without_turn_around`,
     as this implementation will generate instructions with immediate turn-arounds
     (A-B-A) to circumvent any restrictions.
+
+    ``step_limit`` (if not None) limits how many nodes may be expanded during the search
+    before raising :py:exc:`StepLimitExceeded`. Concluding that no route exists requires
+    expanding all nodes accessible from the start, which is usually very time-consuming,
+    especially on large datasets (like the whole planet). Defaults to
+    :py:const:`DEFAULT_STEP_LIMIT`. Only set to ``None`` on small, contained graphs.
     """
     queue: List[_AStarQueueItem] = []
     came_from: Dict[int, int] = {}
     known_costs: Dict[int, float] = {}
     end_position = g.get_node(end).position
+    steps = 0
 
     # Push the start element onto the queue
     queue.append(
@@ -65,6 +89,10 @@ def find_route(
         if item.cost > known_costs.get(item.node_id, inf):
             continue
 
+        steps += 1
+        if step_limit is not None and steps > step_limit:
+            raise StepLimitExceeded()
+
         for neighbor_id, cost in g.get_edges(item.node_id):
             neighbor_cost = item.cost + cost
             if neighbor_cost < known_costs.get(neighbor_id, inf):
@@ -82,6 +110,7 @@ def find_route_without_turn_around(
     start: int,
     end: int,
     distance: DistanceFunction = haversine_earth_distance,
+    step_limit: Optional[int] = DEFAULT_STEP_LIMIT,
 ) -> List[int]:
     """find_route_without_turn_around uses the `A* algorithm <https://en.wikipedia.org/wiki/A*_search_algorithm>`_
     to find the shortest route between two points in the provided graph.
@@ -92,11 +121,18 @@ def find_route_without_turn_around(
     as it runs faster. ``find_route_without_turn_around`` has an extra search dimension -
     it needs to not only consider the node, but also what was the previous node to prevent
     A-B-A immediate turn-around instructions.
+
+    ``step_limit`` (if not None) limits how many nodes may be expanded during the search
+    before raising :py:exc:`StepLimitExceeded`. Concluding that no route exists requires
+    expanding all nodes accessible from the start, which is usually very time-consuming,
+    especially on large datasets (like the whole planet). Defaults to
+    :py:const:`DEFAULT_STEP_LIMIT`. Only set to ``None`` on small, contained graphs.
     """
     queue: List[_AStarQueueItem] = []
     came_from: Dict[_NodeAndBefore, _NodeAndBefore] = {}
     known_costs: Dict[_NodeAndBefore, float] = {}
     end_position = g.get_node(end).position
+    steps = 0
 
     # Push the start element onto the queue
     queue.append(
@@ -122,6 +158,10 @@ def find_route_without_turn_around(
         # Ignore re-expanding nodes if a cheaper way was found earlier
         if item.cost > known_costs.get(item_key, inf):
             continue
+
+        steps += 1
+        if step_limit is not None and steps > step_limit:
+            raise StepLimitExceeded()
 
         item_external_id = g.get_node(item.node_id).external_id
 
