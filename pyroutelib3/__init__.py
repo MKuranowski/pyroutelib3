@@ -14,14 +14,21 @@ __email__ = "mkuranowski+pypackages@gmail.com"
 
 from . import osm, protocols
 from .distance import euclidean_distance, haversine_earth_distance, taxicab_distance
-from .router import find_route, find_route_without_turn_around
+from .router import (
+    DEFAULT_STEP_LIMIT,
+    StepLimitExceeded,
+    find_route,
+    find_route_without_turn_around,
+)
 
 __all__ = [
+    "DEFAULT_STEP_LIMIT",
     "euclidean_distance",
     "find_route_without_turn_around",
     "find_route",
     "haversine_earth_distance",
     "osm",
     "protocols",
+    "StepLimitExceeded",
     "taxicab_distance",
 ]
