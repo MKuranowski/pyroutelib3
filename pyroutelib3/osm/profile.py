@@ -111,6 +111,10 @@ class HighwayProfile(Profile):
     }
 
     def way_penalty(self, way_tags: Mapping[str, str]) -> Optional[float]:
+        """way_penalty returns the penalty of using this way,
+        by looking up the return value of :py:meth:`get_active_highway_value`
+        in :py:attr:`penalties`, unless :py:meth:`is_allowed` return False.
+        """
         # Get the penalty of the highway tag
         highway = self.get_active_highway_value(way_tags)
         penalty = self.penalties.get(highway)
@@ -124,22 +128,33 @@ class HighwayProfile(Profile):
         return penalty
 
     def get_active_highway_value(self, tags: Mapping[str, str]) -> str:
+        """get_active_highway_value gets the string to lookup in :py:attr:`penalties` -
+        the value of the "highway" tag, normalized through :py:obj:`EQUIVALENT_TAGS`.
+        """
         highway = tags.get("highway", "")
         return self.EQUIVALENT_TAGS.get(highway, highway)
 
     def is_allowed(self, way_tags: Mapping[str, str]) -> bool:
-        allowed = True
-        for access_tag in self.access:
+        """is_allowed checks if a way is allowed, as per the
+        `access tags <https://wiki.openstreetmap.org/wiki/Key:access>`_ and the hierarchy
+        defined in :py:attr:`access`. Only values of "no" and "private" can exclude a way,
+        any other value (even "destination" or "permit") is assumed to allow a way to be used.
+        """
+        for access_tag in reversed(self.access):
             value = way_tags.get(access_tag)
-            if value is None:
-                pass
-            elif value in ("no", "private"):
-                allowed = False
-            else:
-                allowed = True
-        return allowed
+            if value in ("no", "private"):
+                return False
+            elif value is not None:
+                return True
+        return True
 
     def way_direction(self, way_tags: Mapping[str, str]) -> Tuple[bool, bool]:
+        """way_direction returns the direction of travel of the provided way.
+        Apart from considering the oneway tag (as returned by :py:meth:`get_active_oneway_value`),
+        ``highway=motorway``, ``highway=motorway_link``, ``junction=roundabout`` and
+        ``junction=circular`` default to being oneway.
+        """
+
         # Start by assuming two-way
         forward = True
         backward = True
@@ -168,15 +183,23 @@ class HighwayProfile(Profile):
         return forward, backward
 
     def get_active_oneway_value(self, tags: Mapping[str, str]) -> str:
-        active_value = tags.get("oneway", "")
-        for mode in self.access:
-            if mode == "access":
-                continue
-            if value := tags.get(f"restriction:{mode}"):
-                active_value = value
-        return active_value
+        """get_active_oneway_value returns the most specific "oneway:MODE" tag,
+        falling back to "oneway" - to use when checking way directionality.
+        """
+        for mode in reversed(self.access):
+            if mode != "access" and (value := tags.get(f"oneway:{mode}")):
+                return value
+        return tags.get("oneway", "")
 
     def is_turn_restriction(self, tags: Mapping[str, str]) -> TurnRestriction:
+        """is_turn_restriction checks relation tags to determine what kind of
+        :py:class:`TurnRestriction` this is. The relation must have a "type=restriction"
+        tag, however, the restriction type may be under "restriction" or "restriction:MODE"
+        keys (see :py:meth:`get_active_restriction_value`), and :py:meth:`is_exempted` must
+        return False. Only only/no right_turn/left_turn/u_turn/straight_on restrictions
+        are accepted.
+        """
+
         if tags.get("type") != "restriction" or self.is_exempted(tags):
             return TurnRestriction.INAPPLICABLE
 
@@ -193,15 +216,18 @@ class HighwayProfile(Profile):
         return TurnRestriction.INAPPLICABLE
 
     def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
-        active_value = tags.get("restriction", "")
-        for mode in self.access:
-            if mode == "access":
-                continue
-            if value := tags.get(f"restriction:{mode}"):
-                active_value = value
-        return active_value
+        """get_active_restriction_value returns the most specific "restriction:MODE" tag,
+        falling back to "restriction" - to use when checking turn restriction type.
+        """
+        for mode in reversed(self.access):
+            if mode != "access" and (value := tags.get(f"restriction:{mode}")):
+                return value
+        return tags.get("restriction", "")
 
     def is_exempted(self, restriction_tags: Mapping[str, str]) -> bool:
+        """is_exempted returns ``True`` if any of the transportation modes
+        under the ``except`` tag are present in :py:attr:`access`.
+        """
         exempted = restriction_tags.get("except")
         if exempted is None:
             return False
