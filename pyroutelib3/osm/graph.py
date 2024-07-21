@@ -9,6 +9,7 @@ from typing_extensions import Self
 
 from ..distance import haversine_earth_distance
 from ..protocols import Position
+from ..simple_graph import SimpleExternalNode, SimpleGraph
 from . import reader
 from .profile import Profile, TurnRestriction
 
@@ -35,25 +36,18 @@ else:
     from itertools import pairwise
 
 
-@dataclass(frozen=True)
-class GraphNode:
+class GraphNode(SimpleExternalNode):
     """GraphNode is a *node* in a :py:class:`Graph`."""
 
-    id: int
-    position: Position
-    osm_id: int
-
     @property
-    def external_id(self) -> int:
-        return self.osm_id
+    def osm_id(self) -> int:
+        return self.external_id
 
 
-class Graph:
+class Graph(SimpleGraph[GraphNode]):
     """Graph implements :py:class:`GraphLike` over OpenStreetMap data."""
 
     profile: Profile
-    nodes: Dict[int, GraphNode]
-    edges: Dict[int, Dict[int, float]]
 
     _phantom_node_id_counter: int
     """_phantom_node_id_counter is a counter used for generating IDs for phantom nodes
@@ -62,9 +56,8 @@ class Graph:
     """
 
     def __init__(self, profile: Profile) -> None:
+        super().__init__()
         self.profile = profile
-        self.nodes = {}
-        self.edges = {}
         self._phantom_node_id_counter = _MAX_NODE_ID
 
     def get_node(self, id: int) -> GraphNode:
@@ -189,7 +182,7 @@ class _GraphBuilder:
             self.g.nodes[node.id] = GraphNode(
                 id=node.id,
                 position=node.position,
-                osm_id=node.id,
+                external_id=node.id,
             )
             self.unused_nodes.add(node.id)
 
@@ -583,7 +576,7 @@ class _GraphChange:
             self.g.nodes[new_id] = GraphNode(
                 id=new_id,
                 position=old_node.position,
-                osm_id=old_node.osm_id,
+                external_id=old_node.osm_id,
             )
             self.g.edges[new_id] = self.g.edges[old_id].copy()
 

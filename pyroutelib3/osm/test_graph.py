@@ -67,7 +67,7 @@ class TestGraph(TestCaseWithEdges):
 
         # Check turn restriction -200: no -8 → -7 → -3
         self.assertNoEdge(g, -8, -7)
-        phantom_nodes = [id for id in g.edges[-8] if g.nodes[id].osm_id == -7]
+        phantom_nodes = [id for id in g.edges[-8] if g.nodes[id].external_id == -7]
         self.assertEqual(len(phantom_nodes), 1)
         phantom_node = phantom_nodes[0]
         self.assertEdge(g, -8, phantom_node)
@@ -79,7 +79,7 @@ class TestGraph(TestCaseWithEdges):
 
         # Check turn restriction: only -1 → -2 → -3
         self.assertNoEdge(g, -1, -2)
-        phantom_nodes = [id for id in g.edges[-1] if g.nodes[id].osm_id == -2]
+        phantom_nodes = [id for id in g.edges[-1] if g.nodes[id].external_id == -2]
         self.assertEqual(len(phantom_nodes), 1)
         phantom_node = phantom_nodes[0]
         self.assertEdge(g, -1, phantom_node)
@@ -92,16 +92,16 @@ class TestGraphBuilder(TestCaseWithEdges):
         b = _GraphBuilder(g)
         b.add_node(reader.Node(1, (0.0, 0.0)))
 
-        self.assertEqual(g.nodes[1], GraphNode(id=1, position=(0.0, 0.0), osm_id=1))
+        self.assertEqual(g.nodes[1], GraphNode(id=1, position=(0.0, 0.0), external_id=1))
         self.assertIn(1, b.unused_nodes)
 
     def test_add_node_duplicate(self) -> None:
         g = Graph(CarProfile())
-        g.nodes[1] = GraphNode(id=1, position=(0.0, 0.0), osm_id=1)
+        g.nodes[1] = GraphNode(id=1, position=(0.0, 0.0), external_id=1)
         b = _GraphBuilder(g)
         b.add_node(reader.Node(1, (0.1, 0.0)))
 
-        self.assertEqual(g.nodes[1], GraphNode(id=1, position=(0.0, 0.0), osm_id=1))
+        self.assertEqual(g.nodes[1], GraphNode(id=1, position=(0.0, 0.0), external_id=1))
         self.assertNotIn(1, b.unused_nodes)
 
     def test_add_node_big_osm_id(self) -> None:
@@ -759,11 +759,11 @@ class TestGraphChange(TestCase):
         #        (100) (100)
         self.g = Graph(CarProfile())
         self.g.nodes = {
-            1: GraphNode(id=1, position=(0.0, 0.0), osm_id=1),
-            2: GraphNode(id=2, position=(0.1, 0.0), osm_id=2),
-            3: GraphNode(id=3, position=(0.2, 0.0), osm_id=3),
-            4: GraphNode(id=4, position=(0.3, 0.0), osm_id=4),
-            5: GraphNode(id=5, position=(0.2, 0.1), osm_id=5),
+            1: GraphNode(id=1, position=(0.0, 0.0), external_id=1),
+            2: GraphNode(id=2, position=(0.1, 0.0), external_id=2),
+            3: GraphNode(id=3, position=(0.2, 0.0), external_id=3),
+            4: GraphNode(id=4, position=(0.3, 0.0), external_id=4),
+            5: GraphNode(id=5, position=(0.2, 0.1), external_id=5),
         }
         self.g.edges = {
             1: {2: 200.0},
@@ -785,7 +785,7 @@ class TestGraphChange(TestCase):
         self.assertEqual(change.phantom_node_id_counter, 11)
 
     def test_restriction_as_cloned_nodes_reuses_inner_nodes(self) -> None:
-        self.g.nodes[11] = GraphNode(id=11, position=(0.1, 0.0), osm_id=2)
+        self.g.nodes[11] = GraphNode(id=11, position=(0.1, 0.0), external_id=2)
         del self.g.edges[1][2]
         self.g.edges[1][11] = 200.0
         self.g.edges[11] = {1: 200.0, 3: 200.0, 5: 100.0}
@@ -798,8 +798,8 @@ class TestGraphChange(TestCase):
         self.assertSetEqual(change.edges_to_remove, set())
 
     def test_restriction_as_cloned_nodes_reuses_last_nodes(self) -> None:
-        self.g.nodes[11] = GraphNode(id=11, position=(0.1, 0.0), osm_id=2)
-        self.g.nodes[12] = GraphNode(id=12, position=(0.1, 0.0), osm_id=3)
+        self.g.nodes[11] = GraphNode(id=11, position=(0.1, 0.0), external_id=2)
+        self.g.nodes[12] = GraphNode(id=12, position=(0.1, 0.0), external_id=3)
         del self.g.edges[1][2]
         self.g.edges[1][11] = 200.0
         self.g.edges[11] = {1: 200.0, 12: 200.0, 5: 100.0}
@@ -827,12 +827,12 @@ class TestGraphChange(TestCase):
         self.assertDictEqual(
             self.g.nodes,
             {
-                1: GraphNode(id=1, position=(0.0, 0.0), osm_id=1),
-                2: GraphNode(id=2, position=(0.1, 0.0), osm_id=2),
-                3: GraphNode(id=3, position=(0.2, 0.0), osm_id=3),
-                4: GraphNode(id=4, position=(0.3, 0.0), osm_id=4),
-                5: GraphNode(id=5, position=(0.2, 0.1), osm_id=5),
-                11: GraphNode(id=11, position=(0.1, 0.0), osm_id=2),
+                1: GraphNode(id=1, position=(0.0, 0.0), external_id=1),
+                2: GraphNode(id=2, position=(0.1, 0.0), external_id=2),
+                3: GraphNode(id=3, position=(0.2, 0.0), external_id=3),
+                4: GraphNode(id=4, position=(0.3, 0.0), external_id=4),
+                5: GraphNode(id=5, position=(0.2, 0.1), external_id=5),
+                11: GraphNode(id=11, position=(0.1, 0.0), external_id=2),
             },
         )
         self.assertDictEqual(
@@ -859,13 +859,13 @@ class TestGraphChange(TestCase):
         self.assertDictEqual(
             self.g.nodes,
             {
-                1: GraphNode(id=1, position=(0.0, 0.0), osm_id=1),
-                2: GraphNode(id=2, position=(0.1, 0.0), osm_id=2),
-                3: GraphNode(id=3, position=(0.2, 0.0), osm_id=3),
-                4: GraphNode(id=4, position=(0.3, 0.0), osm_id=4),
-                5: GraphNode(id=5, position=(0.2, 0.1), osm_id=5),
-                11: GraphNode(id=11, position=(0.1, 0.0), osm_id=2),
-                12: GraphNode(id=12, position=(0.2, 0.0), osm_id=3),
+                1: GraphNode(id=1, position=(0.0, 0.0), external_id=1),
+                2: GraphNode(id=2, position=(0.1, 0.0), external_id=2),
+                3: GraphNode(id=3, position=(0.2, 0.0), external_id=3),
+                4: GraphNode(id=4, position=(0.3, 0.0), external_id=4),
+                5: GraphNode(id=5, position=(0.2, 0.1), external_id=5),
+                11: GraphNode(id=11, position=(0.1, 0.0), external_id=2),
+                12: GraphNode(id=12, position=(0.2, 0.0), external_id=3),
             },
         )
         self.assertDictEqual(

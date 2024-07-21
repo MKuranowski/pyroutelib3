@@ -20,6 +20,7 @@ from .router import (
     find_route,
     find_route_without_turn_around,
 )
+from .simple_graph import SimpleExternalNode, SimpleGraph, SimpleNode
 
 __all__ = [
     "DEFAULT_STEP_LIMIT",
@@ -29,6 +30,9 @@ __all__ = [
     "haversine_earth_distance",
     "osm",
     "protocols",
+    "SimpleExternalNode",
+    "SimpleGraph",
+    "SimpleNode",
     "StepLimitExceeded",
     "taxicab_distance",
 ]
