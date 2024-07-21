@@ -536,7 +536,7 @@ class _GraphChange:
         with an edge going in from a node identified by ``from_node_id``.
         """
         original_from_node_id = self.new_nodes.get(from_node_id, from_node_id)
-        for candidate_to_node_id in self.g.edges[original_from_node_id]:
+        for candidate_to_node_id in self.g.edges.get(original_from_node_id, {}):
             candidate_to_osm_id = self.g.nodes[candidate_to_node_id].osm_id
             if candidate_to_osm_id == to_osm_id:
                 return candidate_to_node_id

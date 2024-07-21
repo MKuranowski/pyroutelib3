@@ -1,5 +1,6 @@
 from . import reader
 from .graph import Graph, GraphNode
+from .live_graph import LiveGraph
 from .profile import (
     BicycleProfile,
     BusProfile,
@@ -20,6 +21,7 @@ __all__ = [
     "GraphNode",
     "HighwayProfile",
     "HighwayProfile",
+    "LiveGraph",
     "NonMotorroadHighwayProfile",
     "Profile",
     "Profile",
