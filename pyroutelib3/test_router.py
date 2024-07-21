@@ -1,33 +1,8 @@
-from dataclasses import dataclass
-from typing import Dict, Iterable, Tuple
 from unittest import TestCase
 
 from .distance import euclidean_distance
-from .protocols import GraphLike, Position
 from .router import StepLimitExceeded, find_route, find_route_without_turn_around
-
-
-@dataclass
-class Node:
-    id: int
-    position: Position
-    external_id: int = -1
-
-    def __post_init__(self) -> None:
-        if self.external_id < 0:
-            self.external_id = self.id
-
-
-@dataclass
-class Graph(GraphLike[Node]):
-    nodes: Dict[int, Node]
-    edges: Dict[int, Dict[int, float]]
-
-    def get_node(self, id: int) -> Node:
-        return self.nodes[id]
-
-    def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
-        return self.edges[id].items()
+from .simple_graph import SimpleExternalNode, SimpleGraph, SimpleNode
 
 
 class TestFindRoute(TestCase):
@@ -36,13 +11,13 @@ class TestFindRoute(TestCase):
         # 1─────2─────3─────4
         #       └─────5─────┘
         #        (10)   (10)
-        g = Graph(
+        g = SimpleGraph(
             nodes={
-                1: Node(1, (1, 1)),
-                2: Node(2, (2, 1)),
-                3: Node(3, (3, 1)),
-                4: Node(4, (4, 1)),
-                5: Node(5, (3, 0)),
+                1: SimpleNode(1, (1, 1)),
+                2: SimpleNode(2, (2, 1)),
+                3: SimpleNode(3, (3, 1)),
+                4: SimpleNode(4, (4, 1)),
+                5: SimpleNode(5, (3, 0)),
             },
             edges={
                 1: {2: 20},
@@ -69,17 +44,17 @@ class TestFindRoute(TestCase):
         #  │60   │50   │10
         #  │ 10  │ 20  │
         #  1─────2─────3
-        g = Graph(
+        g = SimpleGraph(
             nodes={
-                1: Node(1, (0, 0)),
-                2: Node(2, (1, 0)),
-                3: Node(3, (2, 0)),
-                4: Node(4, (0, 1)),
-                5: Node(5, (1, 1)),
-                6: Node(6, (2, 1)),
-                7: Node(7, (0, 2)),
-                8: Node(8, (1, 2)),
-                9: Node(9, (2, 2)),
+                1: SimpleNode(1, (0, 0)),
+                2: SimpleNode(2, (1, 0)),
+                3: SimpleNode(3, (2, 0)),
+                4: SimpleNode(4, (0, 1)),
+                5: SimpleNode(5, (1, 1)),
+                6: SimpleNode(6, (2, 1)),
+                7: SimpleNode(7, (0, 2)),
+                8: SimpleNode(8, (1, 2)),
+                9: SimpleNode(9, (2, 2)),
             },
             edges={
                 1: {2: 10, 4: 60},
@@ -104,13 +79,13 @@ class TestFindRoute(TestCase):
         # 1─────2─────3─────4
         #       └─────5─────┘
         #        (10)   (10)
-        g = Graph(
+        g = SimpleGraph(
             nodes={
-                1: Node(1, (1, 1)),
-                2: Node(2, (2, 1)),
-                3: Node(3, (3, 1)),
-                4: Node(4, (4, 1)),
-                5: Node(5, (3, 0)),
+                1: SimpleNode(1, (1, 1)),
+                2: SimpleNode(2, (2, 1)),
+                3: SimpleNode(3, (3, 1)),
+                4: SimpleNode(4, (4, 1)),
+                5: SimpleNode(5, (3, 0)),
             },
             edges={
                 1: {2: 20},
@@ -137,14 +112,14 @@ class TestFindRouteWithoutTurnAround(TestCase):
         # │ 10  │
         # 3─────5
         # mandatory 1-2-4
-        g = Graph(
+        g = SimpleGraph(
             nodes={
-                1: Node(1, (0, 2)),
-                2: Node(2, (0, 1)),
-                20: Node(20, (0, 1), external_id=2),
-                3: Node(3, (0, 0)),
-                4: Node(4, (1, 1)),
-                5: Node(5, (1, 0)),
+                1: SimpleExternalNode.with_same_external_id(1, (0, 2)),
+                2: SimpleExternalNode.with_same_external_id(2, (0, 1)),
+                20: SimpleExternalNode(20, (0, 1), external_id=2),
+                3: SimpleExternalNode.with_same_external_id(3, (0, 0)),
+                4: SimpleExternalNode.with_same_external_id(4, (1, 1)),
+                5: SimpleExternalNode.with_same_external_id(5, (1, 0)),
             },
             edges={
                 1: {20: 10},
@@ -171,13 +146,13 @@ class TestFindRouteWithoutTurnAround(TestCase):
         # 1─────2─────3─────4
         #       └─────5─────┘
         #        (10)   (10)
-        g = Graph(
+        g = SimpleGraph(
             nodes={
-                1: Node(1, (1, 1)),
-                2: Node(2, (2, 1)),
-                3: Node(3, (3, 1)),
-                4: Node(4, (4, 1)),
-                5: Node(5, (3, 0)),
+                1: SimpleExternalNode.with_same_external_id(1, (1, 1)),
+                2: SimpleExternalNode.with_same_external_id(2, (2, 1)),
+                3: SimpleExternalNode.with_same_external_id(3, (3, 1)),
+                4: SimpleExternalNode.with_same_external_id(4, (4, 1)),
+                5: SimpleExternalNode.with_same_external_id(5, (3, 0)),
             },
             edges={
                 1: {2: 20},
