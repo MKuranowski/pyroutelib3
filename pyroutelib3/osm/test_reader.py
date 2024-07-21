@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from .reader import Node, Relation, RelationMember, Way, collect_all_features
 
-FIXTURES_DIR = Path(__file__).with_name("fixtures")
+FIXTURES_DIR = Path(__file__).with_name("test_fixtures")
 
 SIMPLE_GRAPH_NODES = [
     Node(-1, (-2.73495245962, 2.83923666828), {"ref": "-1"}),

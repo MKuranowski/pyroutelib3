@@ -7,7 +7,7 @@ from . import reader
 from .graph import Graph, GraphNode, _GraphBuilder, _GraphChange
 from .profile import CarProfile
 
-FIXTURES_DIR = Path(__file__).with_name("fixtures")
+FIXTURES_DIR = Path(__file__).with_name("test_fixtures")
 
 
 class TestCaseWithEdges(TestCase):
