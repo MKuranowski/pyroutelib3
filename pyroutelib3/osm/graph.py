@@ -60,12 +60,6 @@ class Graph(SimpleGraph[GraphNode]):
         self.profile = profile
         self._phantom_node_id_counter = _MAX_NODE_ID
 
-    def get_node(self, id: int) -> GraphNode:
-        return self.nodes[id]
-
-    def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
-        return self.edges[id].items()
-
     def find_nearest_node(self, position: Position) -> GraphNode:
         """find_nearest_node finds the closest node to the provided :py:obj:`Position`.
         Phantom nodes ``nd.id != nd.osm_id`` created by turn restrictions are not considered.

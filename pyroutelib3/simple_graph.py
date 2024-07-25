@@ -45,4 +45,4 @@ class SimpleGraph(GraphLike[NodeLikeT_co]):
         return self.nodes[id]
 
     def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
-        return self.edges[id].items()
+        return self.edges.get(id, {}).items()
