@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="Osmosis 0.49.2">
+  <node id="-25358" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3317397" lon="124.1713321"/>
+  <node id="-25360" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3313682" lon="124.1725445"/>
+  <node id="-25361" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3311923" lon="124.173392"/>
+  <node id="-25362" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3312607" lon="124.1742611"/>
+  <node id="-25363" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3314269" lon="124.1747546"/>
+  <node id="-25364" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3319841" lon="124.1753983"/>
+  <node id="-25365" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3328151" lon="124.1761601"/>
+  <node id="-25366" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3339686" lon="124.1769004"/>
+  <node id="-25367" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.335694" lon="124.1775495"/>
+  <node id="-25368" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3325609" lon="124.1719758"/>
+  <node id="-25369" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3333429" lon="124.172523"/>
+  <node id="-25370" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3328933" lon="124.1751194"/>
+  <node id="-25372" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3329372" lon="124.1784185"/>
+  <node id="-25387" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3343498" lon="124.173274"/>
+  <node id="-25388" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3352394" lon="124.1736495"/>
+  <node id="-25389" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3367155" lon="124.1742718"/>
+  <node id="-25390" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.336217" lon="124.1760743"/>
+  <node id="-25392" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3361164" lon="124.1740192"/>
+  <node id="-25393" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3355913" lon="124.1757953"/>
+  <node id="-25394" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3351808" lon="124.1769326"/>
+  <node id="-25395" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3350872" lon="124.1773212"/>
+  <node id="-25396" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3350195" lon="124.1780215"/>
+  <node id="-25397" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.335171" lon="124.1783971"/>
+  <node id="-25398" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3353127" lon="124.178558"/>
+  <node id="-25400" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3340468" lon="124.1753232"/>
+  <node id="-25401" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3347457" lon="124.1754091"/>
+  <node id="-25416" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3337144" lon="124.1820395"/>
+  <node id="-25419" version="1" timestamp="2024-07-24T00:00:00Z" lat="24.3331865" lon="124.1798508"/>
+  <way id="-579" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25358"/>
+    <nd ref="-25360"/>
+    <nd ref="-25361"/>
+    <nd ref="-25362"/>
+    <nd ref="-25363"/>
+    <nd ref="-25364"/>
+    <nd ref="-25365"/>
+    <nd ref="-25366"/>
+    <nd ref="-25395"/>
+    <nd ref="-25367"/>
+    <tag k="highway" v="primary"/>
+  </way>
+  <way id="-602" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25369"/>
+    <nd ref="-25370"/>
+    <nd ref="-25365"/>
+    <tag k="highway" v="tertiary"/>
+  </way>
+  <way id="-605" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25358"/>
+    <nd ref="-25368"/>
+    <nd ref="-25369"/>
+    <tag k="highway" v="tertiary"/>
+  </way>
+  <way id="-617" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25365"/>
+    <nd ref="-25372"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="-619" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25369"/>
+    <nd ref="-25387"/>
+    <nd ref="-25388"/>
+    <nd ref="-25392"/>
+    <nd ref="-25389"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="-622" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25389"/>
+    <nd ref="-25390"/>
+    <nd ref="-25367"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="-625" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25392"/>
+    <nd ref="-25393"/>
+    <nd ref="-25394"/>
+    <nd ref="-25395"/>
+    <nd ref="-25396"/>
+    <nd ref="-25397"/>
+    <nd ref="-25398"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="-632" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25370"/>
+    <nd ref="-25400"/>
+    <nd ref="-25401"/>
+    <nd ref="-25393"/>
+    <nd ref="-25390"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="-655" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25367"/>
+    <nd ref="-25398"/>
+    <tag k="highway" v="tertiary"/>
+  </way>
+  <way id="-705" version="1" timestamp="2024-07-24T00:00:00Z">
+    <nd ref="-25372"/>
+    <nd ref="-25419"/>
+    <nd ref="-25416"/>
+    <tag k="highway" v="footway"/>
+  </way>
+</osm>

@@ -1,16 +1,26 @@
+from logging import getLogger
 from math import asinh, atan, degrees, pi, radians, sinh, tan
 from os import PathLike
 from pathlib import Path
 from time import time
-from typing import Any, Callable, ContextManager, Iterable, Set, Tuple, Union
+from typing import IO, Any, Callable, ContextManager, Iterable, Set, Tuple, Union
 from urllib.request import urlretrieve
 
 from filelock import FileLock
+from typing_extensions import Self
 
 from ..protocols import Position
 from .graph import Graph, GraphNode
 from .profile import Profile
-from .reader import read_features_from_xml
+from .reader import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_FILE_FORMAT,
+    FILE_FORMAT_T,
+    Feature,
+    read_features_from_xml,
+)
+
+logger = getLogger("pyroutelib3.osm.LiveGraph")
 
 
 class LiveGraph(Graph):
@@ -43,14 +53,17 @@ class LiveGraph(Graph):
     """Tiles are re-downloaded if older than tile_expiry_seconds. Defaults to 30 days."""
 
     tile_zoom: int
-    """How large should the downloaded tiles be? See <https://wiki.openstreetmap.org/wiki/Zoom_levels>."""
+    """How large should the downloaded tiles be? See <https://wiki.openstreetmap.org/wiki/Zoom_levels>.
+    Note that the OSM API rejects requests with too much data with "400 Bad Request" - if that is
+    the case, increase the zoom level.
+    """
 
     osm_api_url: str
     """Format string used for generating URLs with tile data. Must have
     ``left``, ``bottom``, ``right`` and ``top`` placeholders."""
 
     file_lock: Callable[[Path], ContextManager[Any]]
-    """Mechanizm used to ensure tiles are not downloaded simultaneously.
+    """Context manager used to ensure tiles are not downloaded simultaneously.
     Useful if multiple LiveGraphs use the same tile cache directory at the same time.
     Defaults to `filelock.FileLock <https://py-filelock.readthedocs.io/en/latest/api.html#filelock.FileLock>`_.
     """
@@ -62,7 +75,7 @@ class LiveGraph(Graph):
         profile: Profile,
         tile_cache_directory: Union[str, "PathLike[str]"] = "tilecache",
         tile_expiry_seconds: int = 60 * 60 * 24 * 30,
-        tile_zoom: int = 14,
+        tile_zoom: int = 15,
         osm_api_url: str = "https://api.openstreetmap.org/api/0.6/map?bbox={left},{bottom},{right},{top}",
         file_lock: Callable[[Path], ContextManager[Any]] = FileLock,
     ) -> None:
@@ -75,14 +88,24 @@ class LiveGraph(Graph):
         self._downloaded_tiles = set()
 
     def find_nearest_node(self, position: Position) -> GraphNode:
-        self.download_tile_around(position)
+        self.load_tile_around(position)
         return super().find_nearest_node(position)
 
     def get_edges(self, id: int) -> Iterable[Tuple[int, float]]:
-        self.download_tile_around(self.nodes[id].position)
+        self.load_tile_around(self.nodes[id].position)
         return super().get_edges(id)
 
-    def download_tile_around(self, position: Position) -> None:
+    def load_tile_around(self, position: Position) -> None:
+        """Ensures the tile in which ``position`` falls is loaded into the graph.
+
+        If that tile is loaded, this function does nothing.
+
+        If that tile is cached (present in :py:attr:`tile_cache_directory`) and reasonably
+        up-to-date (as defined by :py:attr:`tile_expiry_seconds`) it is simply loaded.
+
+        Otherwise, this function downloads the tile before loading it.
+        """
+
         tile = _lat_lon_to_tile(position[0], position[1], self.tile_zoom)
         if tile in self._downloaded_tiles:
             return
@@ -94,32 +117,51 @@ class LiveGraph(Graph):
         tile_lock = tile_directory / "lock"
 
         with self.file_lock(tile_lock):
-            if self.has_up_to_date_tile(tile_file):
-                return
-
-            self.save_tile(tile, tile_file)
-            self.load_tile(tile_file)
+            if not self.has_up_to_date_tile(tile_file):
+                self.download_tile(tile, tile_file)
+            self.load_tile(tile, tile_file)
 
     def get_tile_directory(self, tile: Tuple[int, int]) -> Path:
+        """Returns the directory in which the provided ``tile`` data should be stored."""
         return self.tile_cache_directory / str(self.tile_zoom) / str(tile[0]) / str(tile[1])
 
     def has_up_to_date_tile(self, tile_file: Path) -> bool:
+        """Checks if a tile stored at the provided path is reasonably up-to-date
+        (as defined by :py:attr:`tile_expiry_seconds`). If the provided file doesn't exist,
+        returns ``False``.
+        """
         try:
             downloaded_seconds_ago = time() - tile_file.stat().st_mtime
             return downloaded_seconds_ago < self.tile_expiry_seconds
         except FileNotFoundError:
             return False
 
-    def save_tile(self, tile: Tuple[int, int], tile_file: Path) -> None:
+    def download_tile(self, tile: Tuple[int, int], tile_file: Path) -> None:
+        """Downloads the provided tile (using :py:attr:`osm_api_url`) to the provided path."""
+        logger.info("Downloading tile x=%d y=%d zoom=%d", tile[0], tile[1], self.tile_zoom)
         left, bottom, right, top = _tile_boundary(tile[0], tile[1], self.tile_zoom)
-        urlretrieve(
-            self.osm_api_url.format(left=left, bottom=bottom, right=right, top=top),
-            tile_file,
-        )
+        url = self.osm_api_url.format(left=left, bottom=bottom, right=right, top=top)
+        urlretrieve(url, tile_file)
 
-    def load_tile(self, tile_file: Path) -> None:
+    def load_tile(self, tile: Tuple[int, int], tile_file: Path) -> None:
+        """Loads the provided tile into the graph."""
+        logger.info("Loading tile x=%d y=%d zoom=%d", tile[0], tile[1], self.tile_zoom)
         with tile_file.open("rb") as f:
             self.add_features(read_features_from_xml(f))
+
+    @classmethod
+    def from_file(
+        cls,
+        profile: Profile,
+        buf: IO[bytes],
+        format: FILE_FORMAT_T = DEFAULT_FILE_FORMAT,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> Self:
+        raise RuntimeError("pyroutelib3.osm.LiveGraph.from_file is not supported")
+
+    @classmethod
+    def from_features(cls, profile: Profile, features: Iterable[Feature]) -> Self:
+        raise RuntimeError("pyroutelib3.osm.LiveGraph.from_features is not supported")
 
 
 def _lat_lon_to_tile(lat: float, lon: float, zoom: int) -> Tuple[int, int]:
@@ -134,7 +176,7 @@ def _tile_boundary(x: int, y: int, zoom: int) -> Tuple[float, float, float, floa
 
     longitude_side = 360.0 / n
     left = x * longitude_side - 180.0
-    right = x + longitude_side
+    right = left + longitude_side
 
     top = _mercator_to_lat(pi * (1 - 2 * (y * (1 / n))))
     bottom = _mercator_to_lat(pi * (1 - 2 * ((y + 1) * (1 / n))))
