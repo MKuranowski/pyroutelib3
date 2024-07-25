@@ -12,7 +12,7 @@ __license__ = "GPL-3.0-or-later"
 __version__ = "2.0.0-pre1"
 __email__ = "mkuranowski+pypackages@gmail.com"
 
-from . import osm, protocols
+from . import nx, osm, protocols
 from .distance import euclidean_distance, haversine_earth_distance, taxicab_distance
 from .router import (
     DEFAULT_STEP_LIMIT,
@@ -28,6 +28,7 @@ __all__ = [
     "find_route_without_turn_around",
     "find_route",
     "haversine_earth_distance",
+    "nx",
     "osm",
     "protocols",
     "SimpleExternalNode",
