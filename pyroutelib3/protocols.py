@@ -11,20 +11,22 @@ crow-flies distance between two points.
 """
 
 
-class NodeLike(Protocol):
+class WithPosition(Protocol):
+    """WithPosition describes any object with a ``position`` property of :py:obj:`Position` type."""
+
+    @property
+    def position(self) -> Position: ...
+
+
+WithPositionT = TypeVar("WithPositionT", bound=WithPosition)
+
+
+class NodeLike(WithPosition, Protocol):
     """NodeLike describes the protocol of a *node* in a *graph*."""
 
     @property
     def id(self) -> int:
         """id property must uniquely identify this *node* in its *graph*."""
-        ...
-
-    @property
-    def position(self) -> Position:
-        """position property must describe the position of this *node* in
-        reference to other nodes in its *graph*. For real-life graphs,
-        this should be WGS84 degrees, first latitude, then longitude.
-        """
         ...
 
 
