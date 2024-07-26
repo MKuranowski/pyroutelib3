@@ -14,6 +14,7 @@ __email__ = "mkuranowski+pypackages@gmail.com"
 
 from . import nx, osm, protocols
 from .distance import euclidean_distance, haversine_earth_distance, taxicab_distance
+from .kd import KDTree
 from .router import (
     DEFAULT_STEP_LIMIT,
     StepLimitExceeded,
@@ -28,6 +29,7 @@ __all__ = [
     "find_route_without_turn_around",
     "find_route",
     "haversine_earth_distance",
+    "KDTree",
     "nx",
     "osm",
     "protocols",
