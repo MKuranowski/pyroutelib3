@@ -5,8 +5,43 @@ from .profile import (
     HighwayProfile,
     NonMotorroadHighwayProfile,
     RailwayProfile,
+    SkeletonProfile,
     TurnRestriction,
 )
+
+
+class TestSkeletonProfile(TestCase):
+    def test(self) -> None:
+        p = SkeletonProfile()
+
+        self.assertEqual(p.way_penalty({}), 1.0)
+        self.assertEqual(p.way_penalty({"railway": "rail"}), 1.0)
+        self.assertEqual(p.way_penalty({"railway": "narrow_gauge"}), 1.0)
+        self.assertEqual(p.way_penalty({"highway": "primary"}), 1.0)
+        self.assertEqual(p.way_penalty({"railway": "rail", "access": "no"}), 1.0)
+
+        self.assertEqual(p.way_direction({}), (True, True))
+        self.assertEqual(p.way_direction({"oneway": "yes"}), (True, False))
+        self.assertEqual(p.way_direction({"oneway": "-1"}), (False, True))
+        self.assertEqual(p.way_direction({"oneway": "no"}), (True, True))
+
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction": "no_left_turn"}),
+            TurnRestriction.INAPPLICABLE,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction": "only_right_turn"}),
+            TurnRestriction.INAPPLICABLE,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction:foot": "no_left_turn"}),
+            TurnRestriction.INAPPLICABLE,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"restriction": "no_left_turn"}),
+            TurnRestriction.INAPPLICABLE,
+        )
+        self.assertIs(p.is_turn_restriction({}), TurnRestriction.INAPPLICABLE)
 
 
 class TestHighwayProfile(TestCase):
