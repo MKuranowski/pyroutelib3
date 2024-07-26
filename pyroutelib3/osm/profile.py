@@ -397,3 +397,70 @@ class FootProfile(NonMotorroadHighwayProfile):
 
     def get_active_restriction_value(self, tags: Mapping[str, str]) -> str:
         return tags.get("restriction:foot", "")
+
+
+@dataclass
+class RailwayProfile:
+    """RailwayProfile implements :py:class:`Profile` for routing over railway=* ways.
+
+    Only ``access=no`` or ``access=private`` can prevent a way from being excluded from the graph.
+    There are no default one ways, and only ``oneway`` values of ``yes`` and ``-1`` are accepted.
+    All ``type=restriction`` with ``restriction`` tag set to only/no
+    right_turn/left_turn/u_turn/straight_on are passed through.
+
+    ``RailwayProfile()`` can be used as a profile for routing over ``railway=rail``, ``light_rail``,
+    ``subway`` and ``narrow_gauge``.
+    """
+
+    name: str = "railway"
+
+    penalties: Dict[str, float] = field(
+        default_factory=lambda: {
+            "rail": 1.0,
+            "light_rail": 1.0,
+            "subway": 1.0,
+            "narrow_gauge": 1.0,
+        },
+        repr=False,
+    )
+
+    def way_penalty(self, tags: Mapping[str, str]) -> Optional[float]:
+        if tags.get("access") in ("no", "private"):
+            return None
+        return self.penalties.get(tags.get("railway", ""))
+
+    def way_direction(self, tags: Mapping[str, str]) -> Tuple[bool, bool]:
+        oneway = tags.get("oneway")
+        if oneway == "yes":
+            return True, False
+        elif oneway == "-1":
+            return False, True
+        return True, True
+
+    def is_turn_restriction(self, tags: Mapping[str, str]) -> TurnRestriction:
+        kind, _, description = tags.get("restriction", "").partition("_")
+        if (
+            tags.get("type") == "restriction"
+            and kind in ("no", "only")
+            and description in ("right_turn", "left_turn", "u_turn", "straight_on")
+        ):
+            return TurnRestriction.PROHIBITORY if kind == "no" else TurnRestriction.MANDATORY
+        return TurnRestriction.INAPPLICABLE
+
+
+class TramProfile(RailwayProfile):
+    """TramProfile is a :py:class:`RailwayProfile` which allows routing only over
+    ``railway=tram`` or ``light_rail`` ways.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("tram", {"tram": 1.0, "light_rail": 1.0})
+
+
+class SubwayProfile(RailwayProfile):
+    """SubwayProfile is a :py:class:`RailwayProfile` which allows routing only over
+    ``railway=subway`` ways.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("subway", {"subway": 1.0})

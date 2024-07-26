@@ -1,6 +1,12 @@
 from unittest import TestCase
 
-from .profile import FootProfile, HighwayProfile, NonMotorroadHighwayProfile, TurnRestriction
+from .profile import (
+    FootProfile,
+    HighwayProfile,
+    NonMotorroadHighwayProfile,
+    RailwayProfile,
+    TurnRestriction,
+)
 
 
 class TestHighwayProfile(TestCase):
@@ -193,4 +199,36 @@ class TestFootProfile(TestCase):
         self.assertEqual(
             self.profile.get_active_restriction_value({"restriction:foot": "no_u_turn"}),
             "no_u_turn",
+        )
+
+
+class TestRailwayProfile(TestCase):
+    def test(self) -> None:
+        p = RailwayProfile()
+
+        self.assertEqual(p.way_penalty({"railway": "rail"}), 1.0)
+        self.assertEqual(p.way_penalty({"railway": "narrow_gauge"}), 1.0)
+        self.assertIsNone(p.way_penalty({"highway": "primary"}))
+        self.assertIsNone(p.way_penalty({"railway": "rail", "access": "no"}))
+
+        self.assertEqual(p.way_direction({}), (True, True))
+        self.assertEqual(p.way_direction({"oneway": "yes"}), (True, False))
+        self.assertEqual(p.way_direction({"oneway": "-1"}), (False, True))
+        self.assertEqual(p.way_direction({"oneway": "no"}), (True, True))
+
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction": "no_left_turn"}),
+            TurnRestriction.PROHIBITORY,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction": "only_right_turn"}),
+            TurnRestriction.MANDATORY,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"type": "restriction", "restriction:foot": "no_left_turn"}),
+            TurnRestriction.INAPPLICABLE,
+        )
+        self.assertIs(
+            p.is_turn_restriction({"restriction": "no_left_turn"}),
+            TurnRestriction.INAPPLICABLE,
         )
