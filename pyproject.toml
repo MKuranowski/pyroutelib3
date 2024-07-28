@@ -36,4 +36,4 @@ skip = ["pyroutelib3/osm/pbf"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-ignore = ["pyroutelib3/osm/pbf"]
+ignore = ["pyroutelib3/osm/pbf", "docs"]
