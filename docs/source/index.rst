@@ -1,5 +1,7 @@
-pyroutelib3 documentation
-=========================
+pyroutelib3
+===========
+
+.. This file must be kept in sync with README.md.
 
 .. py:currentmodule:: pyroutelib3
 
@@ -32,7 +34,7 @@ from a service like `Geofabrik OSM data extracts <https://download.geofabrik.de/
     route_lat_lons = [graph.get_node(node).position for node in route]
 
 pyroutelib3 not only is able to parse OpenStreetMap data into a graph
-(see :py:mod:`osm` module), but also contains generic implementations of the A* path-finding
+(see the `osm` module), but also contains generic implementations of the A* path-finding
 algorithm (:py:func:`find_route` and :py:func:`find_route_without_turn_around`) and the
 k-d tree data structure (:py:class:`KDTree`).
 
@@ -51,6 +53,8 @@ Installation
 
 pyroutelib3 uses `semantic versioning <https://semver.org/>`_. Always specify dependencies on
 this library with a constraint on the major revision, e.g. ``pyroutelib3 ~= 2.0.0``.
+
+Note that version 1 of this library is incompatible with version 2.
 
 
 Features
