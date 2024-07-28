@@ -5,6 +5,11 @@ pyroutelib3
 
 .. py:currentmodule:: pyroutelib3
 
+`GitHub <https://github.com/MKuranowski/pyroutelib3>`_ |
+`Documentation <https://pyroutelib3.readthedocs.io/>`_ |
+`Issue Tracker <https://github.com/MKuranowski/pyroutelib3/issues>`_ |
+`PyPI <https://pypi.org/project/pyroutelib3/>`_
+
 pyroutelib3 is a Python library for simple routing over
 `OpenStreetMap <https://openstreetmap.org>`_ data. ::
 

@@ -24,6 +24,10 @@ dependencies = [
 
 [project.urls]
 Home = "https://github.com/MKuranowski/pyroutelib3"
+Source = "https://github.com/MKuranowski/pyroutelib3"
+Documentation = "https://pyroutelib3.readthedocs.io/"
+Tracker = "https://github.com/MKuranowski/pyroutelib3/issues"
+
 
 [tool.black]
 line-length = 100

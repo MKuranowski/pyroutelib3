@@ -2,6 +2,11 @@
 
 <!-- This file must be kept in sync with docs/index.rst -->
 
+[GitHub](https://github.com/MKuranowski/pyroutelib3) |
+[Documentation](https://pyroutelib3.readthedocs.io/) |
+[Issue Tracker](https://github.com/MKuranowski/pyroutelib3/issues) |
+[PyPI](https://pypi.org/project/pyroutelib3/)
+
 Simple routing over OSM data.
 
 pyroutelib3 is a Python library for simple routing over
