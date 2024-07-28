@@ -16,6 +16,7 @@ from .profile import (
     SkeletonProfile,
     SubwayProfile,
     TramProfile,
+    TurnRestriction,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "SkeletonProfile",
     "SubwayProfile",
     "TramProfile",
+    "TurnRestriction",
 ]

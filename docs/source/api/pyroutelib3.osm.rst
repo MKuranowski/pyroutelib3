@@ -53,3 +53,5 @@ Base classes
 .. autoclass:: HighwayProfile
 
 .. autoclass:: NonMotorroadHighwayProfile
+
+.. autoclass:: TurnRestriction
