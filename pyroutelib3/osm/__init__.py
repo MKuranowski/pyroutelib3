@@ -9,7 +9,10 @@ from .profile import (
     HighwayProfile,
     NonMotorroadHighwayProfile,
     Profile,
+    RailwayProfile,
     SkeletonProfile,
+    SubwayProfile,
+    TramProfile,
 )
 
 __all__ = [
@@ -20,11 +23,12 @@ __all__ = [
     "Graph",
     "GraphNode",
     "HighwayProfile",
-    "HighwayProfile",
     "LiveGraph",
     "NonMotorroadHighwayProfile",
     "Profile",
-    "Profile",
     "reader",
+    "RailwayProfile",
     "SkeletonProfile",
+    "SubwayProfile",
+    "TramProfile",
 ]

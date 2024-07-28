@@ -1,10 +1,10 @@
 # © Copyright 2024 Mikołaj Kuranowski
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Simple routing over OSM data"""
+"""Simple routing over OpenStreetMap data"""
 
 __title__ = "pyroutelib3"
-__description__ = "Simple routing over OSM data"
+__description__ = "Simple routing over OpenStreetMap data"
 __url__ = "https://github.com/MKuranowski/pyroutelib3"
 __author__ = "Mikołaj Kuranowski"
 __copyright__ = "© Copyright 2024 Mikołaj Kuranowski"
