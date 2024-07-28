@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from logging import getLogger
 from math import asinh, atan, degrees, pi, radians, sinh, tan
 from os import PathLike

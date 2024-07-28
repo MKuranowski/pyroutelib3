@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from math import inf
