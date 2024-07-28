@@ -1,3 +1,2 @@
-sphinx
-furo
--e ..
+sphinx ~= 7.4
+furo >= 2024.7.18
