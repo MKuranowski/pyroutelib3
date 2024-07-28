@@ -20,6 +20,7 @@ autodoc_default_options = {
     "special-members": "__iter__,__next__,__enter__,__exit__,__contains__",
     "show-inheritance": True,
 }
+autodoc_member_order = "groupwise"
 
 templates_path = ["_templates"]
 exclude_patterns = []

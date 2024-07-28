@@ -48,7 +48,7 @@ class LiveGraph(Graph):
     """Tiles are re-downloaded if older than tile_expiry_seconds. Defaults to 30 days."""
 
     tile_zoom: int
-    """How large should the downloaded tiles be? See <https://wiki.openstreetmap.org/wiki/Zoom_levels>.
+    """How large should the downloaded tiles be? See https://wiki.openstreetmap.org/wiki/Zoom_levels.
     Note that the OSM API rejects requests with too much data with "400 Bad Request" - if that is
     the case, increase the zoom level.
     """
