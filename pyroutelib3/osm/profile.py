@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar, Dict, List, Mapping, Optional, Protocol, Tuple

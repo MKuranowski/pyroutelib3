@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from dataclasses import dataclass
 from operator import itemgetter
 from typing import Any, Callable, Iterable, Mapping, Optional, Protocol, Tuple

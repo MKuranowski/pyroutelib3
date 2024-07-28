@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from . import reader
 from .graph import Graph, GraphNode
 from .live_graph import LiveGraph

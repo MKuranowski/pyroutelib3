@@ -1,3 +1,6 @@
+# © Copyright 2024 Mikołaj Kuranowski
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from typing import Callable, Iterable, Protocol, Tuple, TypeVar
 
 Position = Tuple[float, float]
