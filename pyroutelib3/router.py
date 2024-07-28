@@ -6,10 +6,6 @@ from typing import Dict, List, Mapping, Optional
 from .distance import haversine_earth_distance
 from .protocols import DistanceFunction, ExternalNodeLike, GraphLike, NodeLike
 
-DEFAULT_STEP_LIMIT = 1_000_000
-"""Default number of allowed node expansions in :py:func:`find_route` and
-:py:func:`find_route_without_turn_around`."""
-
 
 @dataclass(frozen=True, order=True)
 class _AStarQueueItem:
@@ -35,6 +31,12 @@ class StepLimitExceeded(ValueError):
     """
 
     pass
+
+
+DEFAULT_STEP_LIMIT = 1_000_000
+"""Default number of allowed node expansions in :py:func:`find_route` and
+:py:func:`find_route_without_turn_around`.
+"""
 
 
 def find_route(

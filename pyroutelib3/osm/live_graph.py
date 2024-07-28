@@ -12,13 +12,7 @@ from typing_extensions import Self
 from ..protocols import Position
 from .graph import Graph, GraphNode
 from .profile import Profile
-from .reader import (
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_FILE_FORMAT,
-    FILE_FORMAT_T,
-    Feature,
-    read_features_from_xml,
-)
+from .reader import DEFAULT_CHUNK_SIZE, DEFAULT_FILE_FORMAT, FILE_FORMAT_T, Feature, read_features
 
 logger = getLogger("pyroutelib3.osm.LiveGraph")
 
@@ -34,6 +28,7 @@ class LiveGraph(Graph):
     Usage of this class is discouraged, it is much more wise to use :py:class:`osm.Graph` directly
     with `OSM data extracts <https://download.geofabrik.de/>`_, further filtered
     with `osmosis <https://wiki.openstreetmap.org/wiki/Osmosis>`. Example command::
+
         osmosis \\
             --read-pbf-fast south-korea-latest.osm.pbf \\
             --bounding-box top=35.3207 left=128.8298 bottom=35.0303 right=129.1608 \\
@@ -147,7 +142,7 @@ class LiveGraph(Graph):
         """Loads the provided tile into the graph."""
         logger.info("Loading tile x=%d y=%d zoom=%d", tile[0], tile[1], self.tile_zoom)
         with tile_file.open("rb") as f:
-            self.add_features(read_features_from_xml(f))
+            self.add_features(read_features(f, format="xml"))
 
     @classmethod
     def from_file(

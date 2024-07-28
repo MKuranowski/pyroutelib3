@@ -14,8 +14,23 @@ from ..protocols import Position
 from .pbf import fileformat_pb2, osmformat_pb2
 
 FILE_FORMAT_T = Optional[Literal["xml", "gz", "bz2", "pbf"]]
+"""Type of the ``format`` argument of :py:func:`read_features`.
+
+Useful when passing this argument forward from custom functions.
+"""
+
 DEFAULT_FILE_FORMAT = None
+"""Default value for the ``format`` argument of :py:func:`read_features`.
+
+Useful when passing this argument forward from custom functions.
+"""
+
 DEFAULT_CHUNK_SIZE = io.DEFAULT_BUFFER_SIZE
+"""Default value for ``chunk_size`` argument of :py:func:`read_features`,
+`io.DEFAULT_BUFFER_SIZE <https://docs.python.org/3/library/io.html#io.DEFAULT_BUFFER_SIZE>`_.
+
+Useful when passing this argument forward from custom functions.
+"""
 
 
 @dataclass
@@ -113,7 +128,7 @@ class _OSMContentHandler(xml.sax.ContentHandler):
             self.current_feature = None
 
 
-def read_features_from_xml(
+def _read_features_from_xml(
     buf: Union[IO[bytes], IO[str]],
     chunk_size: int = io.DEFAULT_BUFFER_SIZE,
 ) -> Iterable[Feature]:
@@ -142,7 +157,7 @@ def read_features_from_xml(
 
 
 class PBFError(ValueError):
-    """Exception raised by :py:func:`read_features_from_pbf` on invalid
+    """Exception raised by :py:func:`read_features` on invalid
     `OSM PBF <https://wiki.openstreetmap.org/wiki/PBF_Format>`_ encoding."""
 
     pass
@@ -365,14 +380,14 @@ def read_features(
     """
     if format == "gz" or (format is None and buf.name.endswith(".gz")):
         with gzip.open(buf, mode="rb") as decompressed_buffer:
-            yield from read_features_from_xml(decompressed_buffer, chunk_size)  # type: ignore
+            yield from _read_features_from_xml(decompressed_buffer, chunk_size)  # type: ignore
     elif format == "bz2" or (format is None and buf.name.endswith(".bz2")):
         with bz2.open(buf, mode="rb") as decompressed_buffer:
-            yield from read_features_from_xml(decompressed_buffer, chunk_size)
+            yield from _read_features_from_xml(decompressed_buffer, chunk_size)
     elif format == "pbf" or (format is None and buf.name.endswith(".pbf")):
         yield from _PBFParser(buf).parse()
     else:
-        yield from read_features_from_xml(buf, chunk_size)
+        yield from _read_features_from_xml(buf, chunk_size)
 
 
 def collect_all_features(

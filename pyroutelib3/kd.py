@@ -12,7 +12,7 @@ class KDTree(Generic[WithPositionT]):
     """KDTree implements the `k-d tree data structure <https://en.wikipedia.org/wiki/K-d_tree>`_,
     which can be used to speed up nearest-neighbor search for large datasets. Practice shows
     that :py:meth:`osm.Graph.find_nearest_neighbor` takes significantly more time than
-    :py:func:`find_route` when generating multiple routes with ``pyroutelib3``.A k-d tree
+    :py:func:`find_route` when generating multiple routes with ``pyroutelib3``. A k-d tree
     can help with that, trading memory usage for CPU time.
 
     This implementation assumes euclidean geometry, even though the default distance function
@@ -96,6 +96,7 @@ class KDTree(Generic[WithPositionT]):
 
         Note that the type-complaint usage of class methods on generic types requires
         explicitly providing the type argument, e.g.::
+
             tree = KDTree[Node].build(nodes)
         """
         return cls._build_impl(list(points), 0)
