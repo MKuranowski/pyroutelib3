@@ -1,4 +1,4 @@
-# © Copyright 2024 Mikołaj Kuranowski
+# © Copyright 2024, 2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from dataclasses import dataclass, field
@@ -41,8 +41,8 @@ class SimpleGraph(GraphLike[NodeLikeT_co]):
     the :py:class:`GraphLike` protocol over two dictionaries: one holding nodes,
     and another holding edge costs."""
 
-    nodes: Dict[int, NodeLikeT_co] = field(default_factory=dict)
-    edges: Dict[int, Dict[int, float]] = field(default_factory=dict)
+    nodes: Dict[int, NodeLikeT_co] = field(default_factory=dict[int, NodeLikeT_co])
+    edges: Dict[int, Dict[int, float]] = field(default_factory=dict[int, dict[int, float]])
 
     def get_node(self, id: int) -> NodeLikeT_co:
         return self.nodes[id]

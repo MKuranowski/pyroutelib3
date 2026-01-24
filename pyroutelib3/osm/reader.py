@@ -1,4 +1,4 @@
-# © Copyright 2024 Mikołaj Kuranowski
+# © Copyright 2024, 2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import bz2
@@ -42,7 +42,7 @@ class Node:
 
     id: int
     position: Position
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: Dict[str, str] = field(default_factory=dict[str, str])
 
 
 @dataclass
@@ -50,8 +50,8 @@ class Way:
     """Way represents a single `OpenStreetMap way <https://wiki.openstreetmap.org/wiki/Way>`_."""
 
     id: int
-    nodes: List[int] = field(default_factory=list)
-    tags: Dict[str, str] = field(default_factory=dict)
+    nodes: List[int] = field(default_factory=list[int])
+    tags: Dict[str, str] = field(default_factory=dict[str, str])
 
     def is_closed(self) -> bool:
         return bool(self.nodes) and self.nodes[0] == self.nodes[-1]
@@ -73,8 +73,8 @@ class Relation:
     """Relation represents a single `OpenStreetMap relation <https://wiki.openstreetmap.org/wiki/Relation>`_."""
 
     id: int
-    members: List[RelationMember] = field(default_factory=list)
-    tags: Dict[str, str] = field(default_factory=dict)
+    members: List[RelationMember] = field(default_factory=list[RelationMember])
+    tags: Dict[str, str] = field(default_factory=dict[str, str])
 
 
 Feature = Union[Node, Way, Relation]
@@ -174,7 +174,7 @@ class _PBFParser:
     lat_offset: int = 0
     lon_offset: int = 0
     date_granularity: int = 1000
-    string_table: List[str] = field(default_factory=list)
+    string_table: List[str] = field(default_factory=list[str])
 
     def parse(self) -> Iterable[Feature]:
         self._read_and_check_header_blob()

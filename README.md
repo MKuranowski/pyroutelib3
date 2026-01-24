@@ -86,7 +86,7 @@ Note that version 1 of this library is incompatible with version 2.
 
 pyroutelib3 is distributed under GNU GPL v3 (or any later version).
 
-> © Copyright 2024 Mikołaj Kuranowski
+> © Copyright 2024, 2026 Mikołaj Kuranowski
 >
 > pyroutelib3 is free software: you can redistribute it and/or modify
 > it under the terms of the GNU General Public License as published by

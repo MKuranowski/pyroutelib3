@@ -1,4 +1,4 @@
-# © Copyright 2024 Mikołaj Kuranowski
+# © Copyright 2024, 2026 Mikołaj Kuranowski
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import gc
@@ -141,12 +141,12 @@ class _GraphBuilder:
 
     g: Graph
 
-    unused_nodes: Set[int] = field(default_factory=set)
+    unused_nodes: Set[int] = field(default_factory=set[int])
     """unused_nodes is a set of nodes added to the graph which weren't used
     by any way - and should be removed once all features have been processed.
     """
 
-    way_nodes: Dict[int, List[int]] = field(default_factory=dict)
+    way_nodes: Dict[int, List[int]] = field(default_factory=dict[int, list[int]])
     """way_nodes maps way_ids to its sequence of nodes, required for relation processing."""
 
     @classmethod
