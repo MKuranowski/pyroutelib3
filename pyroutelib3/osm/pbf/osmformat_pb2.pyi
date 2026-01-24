@@ -1,27 +1,14 @@
-from typing import ClassVar as _ClassVar
-from typing import Iterable as _Iterable
-from typing import Mapping as _Mapping
-from typing import Optional as _Optional
-from typing import Union as _Union
-
-from google.protobuf import descriptor as _descriptor
-from google.protobuf import message as _message
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class HeaderBlock(_message.Message):
-    __slots__ = (
-        "bbox",
-        "required_features",
-        "optional_features",
-        "writingprogram",
-        "source",
-        "osmosis_replication_timestamp",
-        "osmosis_replication_sequence_number",
-        "osmosis_replication_base_url",
-    )
+    __slots__ = ()
     BBOX_FIELD_NUMBER: _ClassVar[int]
     REQUIRED_FEATURES_FIELD_NUMBER: _ClassVar[int]
     OPTIONAL_FEATURES_FIELD_NUMBER: _ClassVar[int]
@@ -38,20 +25,10 @@ class HeaderBlock(_message.Message):
     osmosis_replication_timestamp: int
     osmosis_replication_sequence_number: int
     osmosis_replication_base_url: str
-    def __init__(
-        self,
-        bbox: _Optional[_Union[HeaderBBox, _Mapping]] = ...,
-        required_features: _Optional[_Iterable[str]] = ...,
-        optional_features: _Optional[_Iterable[str]] = ...,
-        writingprogram: _Optional[str] = ...,
-        source: _Optional[str] = ...,
-        osmosis_replication_timestamp: _Optional[int] = ...,
-        osmosis_replication_sequence_number: _Optional[int] = ...,
-        osmosis_replication_base_url: _Optional[str] = ...,
-    ) -> None: ...
+    def __init__(self, bbox: _Optional[_Union[HeaderBBox, _Mapping]] = ..., required_features: _Optional[_Iterable[str]] = ..., optional_features: _Optional[_Iterable[str]] = ..., writingprogram: _Optional[str] = ..., source: _Optional[str] = ..., osmosis_replication_timestamp: _Optional[int] = ..., osmosis_replication_sequence_number: _Optional[int] = ..., osmosis_replication_base_url: _Optional[str] = ...) -> None: ...
 
 class HeaderBBox(_message.Message):
-    __slots__ = ("left", "right", "top", "bottom")
+    __slots__ = ()
     LEFT_FIELD_NUMBER: _ClassVar[int]
     RIGHT_FIELD_NUMBER: _ClassVar[int]
     TOP_FIELD_NUMBER: _ClassVar[int]
@@ -60,23 +37,10 @@ class HeaderBBox(_message.Message):
     right: int
     top: int
     bottom: int
-    def __init__(
-        self,
-        left: _Optional[int] = ...,
-        right: _Optional[int] = ...,
-        top: _Optional[int] = ...,
-        bottom: _Optional[int] = ...,
-    ) -> None: ...
+    def __init__(self, left: _Optional[int] = ..., right: _Optional[int] = ..., top: _Optional[int] = ..., bottom: _Optional[int] = ...) -> None: ...
 
 class PrimitiveBlock(_message.Message):
-    __slots__ = (
-        "stringtable",
-        "primitivegroup",
-        "granularity",
-        "lat_offset",
-        "lon_offset",
-        "date_granularity",
-    )
+    __slots__ = ()
     STRINGTABLE_FIELD_NUMBER: _ClassVar[int]
     PRIMITIVEGROUP_FIELD_NUMBER: _ClassVar[int]
     GRANULARITY_FIELD_NUMBER: _ClassVar[int]
@@ -89,18 +53,10 @@ class PrimitiveBlock(_message.Message):
     lat_offset: int
     lon_offset: int
     date_granularity: int
-    def __init__(
-        self,
-        stringtable: _Optional[_Union[StringTable, _Mapping]] = ...,
-        primitivegroup: _Optional[_Iterable[_Union[PrimitiveGroup, _Mapping]]] = ...,
-        granularity: _Optional[int] = ...,
-        lat_offset: _Optional[int] = ...,
-        lon_offset: _Optional[int] = ...,
-        date_granularity: _Optional[int] = ...,
-    ) -> None: ...
+    def __init__(self, stringtable: _Optional[_Union[StringTable, _Mapping]] = ..., primitivegroup: _Optional[_Iterable[_Union[PrimitiveGroup, _Mapping]]] = ..., granularity: _Optional[int] = ..., lat_offset: _Optional[int] = ..., lon_offset: _Optional[int] = ..., date_granularity: _Optional[int] = ...) -> None: ...
 
 class PrimitiveGroup(_message.Message):
-    __slots__ = ("nodes", "dense", "ways", "relations", "changesets")
+    __slots__ = ()
     NODES_FIELD_NUMBER: _ClassVar[int]
     DENSE_FIELD_NUMBER: _ClassVar[int]
     WAYS_FIELD_NUMBER: _ClassVar[int]
@@ -111,23 +67,16 @@ class PrimitiveGroup(_message.Message):
     ways: _containers.RepeatedCompositeFieldContainer[Way]
     relations: _containers.RepeatedCompositeFieldContainer[Relation]
     changesets: _containers.RepeatedCompositeFieldContainer[ChangeSet]
-    def __init__(
-        self,
-        nodes: _Optional[_Iterable[_Union[Node, _Mapping]]] = ...,
-        dense: _Optional[_Union[DenseNodes, _Mapping]] = ...,
-        ways: _Optional[_Iterable[_Union[Way, _Mapping]]] = ...,
-        relations: _Optional[_Iterable[_Union[Relation, _Mapping]]] = ...,
-        changesets: _Optional[_Iterable[_Union[ChangeSet, _Mapping]]] = ...,
-    ) -> None: ...
+    def __init__(self, nodes: _Optional[_Iterable[_Union[Node, _Mapping]]] = ..., dense: _Optional[_Union[DenseNodes, _Mapping]] = ..., ways: _Optional[_Iterable[_Union[Way, _Mapping]]] = ..., relations: _Optional[_Iterable[_Union[Relation, _Mapping]]] = ..., changesets: _Optional[_Iterable[_Union[ChangeSet, _Mapping]]] = ...) -> None: ...
 
 class StringTable(_message.Message):
-    __slots__ = ("s",)
+    __slots__ = ()
     S_FIELD_NUMBER: _ClassVar[int]
     s: _containers.RepeatedScalarFieldContainer[bytes]
     def __init__(self, s: _Optional[_Iterable[bytes]] = ...) -> None: ...
 
 class Info(_message.Message):
-    __slots__ = ("version", "timestamp", "changeset", "uid", "user_sid", "visible")
+    __slots__ = ()
     VERSION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     CHANGESET_FIELD_NUMBER: _ClassVar[int]
@@ -140,18 +89,10 @@ class Info(_message.Message):
     uid: int
     user_sid: int
     visible: bool
-    def __init__(
-        self,
-        version: _Optional[int] = ...,
-        timestamp: _Optional[int] = ...,
-        changeset: _Optional[int] = ...,
-        uid: _Optional[int] = ...,
-        user_sid: _Optional[int] = ...,
-        visible: bool = ...,
-    ) -> None: ...
+    def __init__(self, version: _Optional[int] = ..., timestamp: _Optional[int] = ..., changeset: _Optional[int] = ..., uid: _Optional[int] = ..., user_sid: _Optional[int] = ..., visible: _Optional[bool] = ...) -> None: ...
 
 class DenseInfo(_message.Message):
-    __slots__ = ("version", "timestamp", "changeset", "uid", "user_sid", "visible")
+    __slots__ = ()
     VERSION_FIELD_NUMBER: _ClassVar[int]
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     CHANGESET_FIELD_NUMBER: _ClassVar[int]
@@ -164,24 +105,16 @@ class DenseInfo(_message.Message):
     uid: _containers.RepeatedScalarFieldContainer[int]
     user_sid: _containers.RepeatedScalarFieldContainer[int]
     visible: _containers.RepeatedScalarFieldContainer[bool]
-    def __init__(
-        self,
-        version: _Optional[_Iterable[int]] = ...,
-        timestamp: _Optional[_Iterable[int]] = ...,
-        changeset: _Optional[_Iterable[int]] = ...,
-        uid: _Optional[_Iterable[int]] = ...,
-        user_sid: _Optional[_Iterable[int]] = ...,
-        visible: _Optional[_Iterable[bool]] = ...,
-    ) -> None: ...
+    def __init__(self, version: _Optional[_Iterable[int]] = ..., timestamp: _Optional[_Iterable[int]] = ..., changeset: _Optional[_Iterable[int]] = ..., uid: _Optional[_Iterable[int]] = ..., user_sid: _Optional[_Iterable[int]] = ..., visible: _Optional[_Iterable[bool]] = ...) -> None: ...
 
 class ChangeSet(_message.Message):
-    __slots__ = ("id",)
+    __slots__ = ()
     ID_FIELD_NUMBER: _ClassVar[int]
     id: int
     def __init__(self, id: _Optional[int] = ...) -> None: ...
 
 class Node(_message.Message):
-    __slots__ = ("id", "keys", "vals", "info", "lat", "lon")
+    __slots__ = ()
     ID_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
     VALS_FIELD_NUMBER: _ClassVar[int]
@@ -194,18 +127,10 @@ class Node(_message.Message):
     info: Info
     lat: int
     lon: int
-    def __init__(
-        self,
-        id: _Optional[int] = ...,
-        keys: _Optional[_Iterable[int]] = ...,
-        vals: _Optional[_Iterable[int]] = ...,
-        info: _Optional[_Union[Info, _Mapping]] = ...,
-        lat: _Optional[int] = ...,
-        lon: _Optional[int] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., keys: _Optional[_Iterable[int]] = ..., vals: _Optional[_Iterable[int]] = ..., info: _Optional[_Union[Info, _Mapping]] = ..., lat: _Optional[int] = ..., lon: _Optional[int] = ...) -> None: ...
 
 class DenseNodes(_message.Message):
-    __slots__ = ("id", "denseinfo", "lat", "lon", "keys_vals")
+    __slots__ = ()
     ID_FIELD_NUMBER: _ClassVar[int]
     DENSEINFO_FIELD_NUMBER: _ClassVar[int]
     LAT_FIELD_NUMBER: _ClassVar[int]
@@ -216,17 +141,10 @@ class DenseNodes(_message.Message):
     lat: _containers.RepeatedScalarFieldContainer[int]
     lon: _containers.RepeatedScalarFieldContainer[int]
     keys_vals: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(
-        self,
-        id: _Optional[_Iterable[int]] = ...,
-        denseinfo: _Optional[_Union[DenseInfo, _Mapping]] = ...,
-        lat: _Optional[_Iterable[int]] = ...,
-        lon: _Optional[_Iterable[int]] = ...,
-        keys_vals: _Optional[_Iterable[int]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[_Iterable[int]] = ..., denseinfo: _Optional[_Union[DenseInfo, _Mapping]] = ..., lat: _Optional[_Iterable[int]] = ..., lon: _Optional[_Iterable[int]] = ..., keys_vals: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class Way(_message.Message):
-    __slots__ = ("id", "keys", "vals", "info", "refs", "lat", "lon")
+    __slots__ = ()
     ID_FIELD_NUMBER: _ClassVar[int]
     KEYS_FIELD_NUMBER: _ClassVar[int]
     VALS_FIELD_NUMBER: _ClassVar[int]
@@ -241,26 +159,15 @@ class Way(_message.Message):
     refs: _containers.RepeatedScalarFieldContainer[int]
     lat: _containers.RepeatedScalarFieldContainer[int]
     lon: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(
-        self,
-        id: _Optional[int] = ...,
-        keys: _Optional[_Iterable[int]] = ...,
-        vals: _Optional[_Iterable[int]] = ...,
-        info: _Optional[_Union[Info, _Mapping]] = ...,
-        refs: _Optional[_Iterable[int]] = ...,
-        lat: _Optional[_Iterable[int]] = ...,
-        lon: _Optional[_Iterable[int]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., keys: _Optional[_Iterable[int]] = ..., vals: _Optional[_Iterable[int]] = ..., info: _Optional[_Union[Info, _Mapping]] = ..., refs: _Optional[_Iterable[int]] = ..., lat: _Optional[_Iterable[int]] = ..., lon: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class Relation(_message.Message):
-    __slots__ = ("id", "keys", "vals", "info", "roles_sid", "memids", "types")
-
+    __slots__ = ()
     class MemberType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         NODE: _ClassVar[Relation.MemberType]
         WAY: _ClassVar[Relation.MemberType]
         RELATION: _ClassVar[Relation.MemberType]
-
     NODE: Relation.MemberType
     WAY: Relation.MemberType
     RELATION: Relation.MemberType
@@ -278,13 +185,4 @@ class Relation(_message.Message):
     roles_sid: _containers.RepeatedScalarFieldContainer[int]
     memids: _containers.RepeatedScalarFieldContainer[int]
     types: _containers.RepeatedScalarFieldContainer[Relation.MemberType]
-    def __init__(
-        self,
-        id: _Optional[int] = ...,
-        keys: _Optional[_Iterable[int]] = ...,
-        vals: _Optional[_Iterable[int]] = ...,
-        info: _Optional[_Union[Info, _Mapping]] = ...,
-        roles_sid: _Optional[_Iterable[int]] = ...,
-        memids: _Optional[_Iterable[int]] = ...,
-        types: _Optional[_Iterable[_Union[Relation.MemberType, str]]] = ...,
-    ) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., keys: _Optional[_Iterable[int]] = ..., vals: _Optional[_Iterable[int]] = ..., info: _Optional[_Union[Info, _Mapping]] = ..., roles_sid: _Optional[_Iterable[int]] = ..., memids: _Optional[_Iterable[int]] = ..., types: _Optional[_Iterable[_Union[Relation.MemberType, str]]] = ...) -> None: ...
